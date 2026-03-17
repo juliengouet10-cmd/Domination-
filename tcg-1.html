@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>TCG — Set Α·Ω</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#07090f;--bg2:#0b0e18;--border:rgba(255,255,255,0.08);
+  --text:#e8d5b7;--muted:#7a6fa0;
+  --gold:#f0c040;--gold2:rgba(240,192,64,0.15);
+  --red:#e05555;--green:#50e090;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Crimson Text',serif;display:flex;flex-direction:column;height:100dvh;}
+
+/* HEADER */
+#hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;}
+#hdr-title{font-family:'Cinzel',serif;font-size:12px;color:var(--gold);text-shadow:0 0 10px rgba(240,192,64,0.4);letter-spacing:.1em;white-space:nowrap;}
+#turn-badge{font-family:'Cinzel',serif;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;white-space:nowrap;transition:all .3s;flex-shrink:0;}
+#hdr-actions{display:flex;gap:5px;flex-shrink:0;}
+.hdr-btn{font-family:'Cinzel',serif;font-size:9px;padding:3px 8px;border-radius:5px;border:1px solid;cursor:pointer;background:transparent;transition:all .15s;white-space:nowrap;}
+.hdr-btn.end{border-color:var(--gold);color:var(--gold);}
+.hdr-btn.end:hover{background:var(--gold2);}
+.hdr-btn.quick{border-color:#ff9922;color:#ff9922;animation:quickPulse 1.5s ease-in-out infinite;}
+@keyframes quickPulse{0%,100%{box-shadow:0 0 0 rgba(255,153,34,0)}50%{box-shadow:0 0 8px rgba(255,153,34,0.5);}}
+.hdr-btn.muted{border-color:var(--border);color:var(--muted);}
+.hdr-btn:disabled{opacity:.3;cursor:default;pointer-events:none;}
+
+/* BOARD */
+#board{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.p-row{display:flex;align-items:center;gap:8px;padding:2px 10px;flex-shrink:0;}
+.p-name{font-family:'Cinzel',serif;font-size:11px;font-weight:600;}
+.p-name.pl{color:var(--green);}.p-name.ai{color:var(--red);}
+.p-stat{font-size:10px;font-family:'Cinzel',serif;}
+
+/* BATTERY */
+.field-wrap{flex:1;min-height:0;padding:0 6px;}
+.field{height:100%;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;padding:5px 7px;gap:5px;overflow-x:auto;overflow-y:hidden;transition:box-shadow .3s;}
+.field.target-on{box-shadow:inset 0 0 24px rgba(255,60,60,0.14);border-color:rgba(255,80,80,0.35);}
+.field-empty{color:rgba(255,255,255,0.1);font-style:italic;font-size:11px;margin:auto;pointer-events:none;}
+/* Permanent card in field — slimmer */
+.perm-card{width:60px;min-height:80px;background:linear-gradient(155deg,#1a1428 55%,#130e20 100%);border-radius:7px;padding:5px 4px;display:flex;flex-direction:column;gap:2px;position:relative;flex-shrink:0;border:1.5px solid;opacity:.92;}
+.perm-card-type{font-size:6px;font-family:'Cinzel',serif;font-weight:700;text-align:center;padding:1px 3px;border-radius:3px;border:1px solid;margin-bottom:1px;}
+.perm-card-fac{font-size:7px;font-family:'Cinzel',serif;font-weight:700;text-align:center;}
+.perm-card-name{font-size:7px;font-family:'Cinzel',serif;color:var(--text);text-align:center;font-weight:600;line-height:1.2;}
+.perm-card-eff{font-size:6px;color:var(--muted);font-style:italic;line-height:1.3;margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);padding-top:2px;}
+.perm-separator{width:1px;height:70%;background:rgba(160,112,240,0.2);border-radius:1px;flex-shrink:0;align-self:center;}
+
+/* QUICK SPELL TOAST */
+#quick-toast{display:none;position:fixed;bottom:calc(var(--hand-height,160px) + 12px);left:50%;transform:translateX(-50%);z-index:190;background:rgba(11,14,24,0.97);border:1.5px solid #ff9922;border-radius:12px;padding:10px 16px;min-width:220px;max-width:300px;box-shadow:0 0 20px rgba(255,153,34,0.35);animation:toastIn .2s ease-out forwards;}
+#quick-toast.show{display:block;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#quick-toast-title{font-family:'Cinzel',serif;font-size:11px;color:#ff9922;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+#quick-toast-close{font-size:14px;cursor:pointer;color:var(--muted);background:none;border:none;padding:0 0 0 8px;line-height:1;}
+#quick-toast-cards{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+.qt-card{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;}
+.qt-card-inner{width:72px;min-height:100px;background:linear-gradient(155deg,#181828 55%,#131828 100%);border-radius:7px;padding:5px;display:flex;flex-direction:column;gap:2px;border:1.5px solid;transition:transform .1s,box-shadow .1s;}
+.qt-card-inner:hover{transform:translateY(-3px);}
+.qt-play-btn{font-size:8px;font-family:'Cinzel',serif;padding:2px 8px;background:#ff992222;border:1px solid #ff992266;color:#ff9922;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.qt-play-btn:hover{background:#ff992244;}
+
+/* DIVIDER */
+#divider{display:flex;align-items:center;justify-content:center;gap:8px;padding:3px 10px;flex-shrink:0;min-height:32px;}
+.act-btn{font-family:'Cinzel',serif;font-size:11px;padding:5px 14px;border:none;border-radius:6px;cursor:pointer;transition:opacity .15s;}
+.act-btn:hover{opacity:.85;}
+.act-btn.atk{background:#c0302a;color:#fff;box-shadow:0 0 10px rgba(192,48,42,0.5);}
+.act-btn.tgt{background:#6030b0;color:#fff;box-shadow:0 0 10px rgba(96,48,176,0.5);}
+
+/* BATTERY */
+.bat-row{display:flex;align-items:center;gap:4px;padding:1px 10px;flex-shrink:0;min-height:16px;}
+.bat-lbl{font-size:8px;color:rgba(240,192,64,0.5);font-family:'Cinzel',serif;}
+.bat-pip{width:14px;height:20px;border-radius:3px;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center;font-size:7px;}
+
+/* HAND */
+#hand-area{flex-shrink:0;border-top:1px solid var(--border);background:var(--bg2);padding:4px 0 5px;}
+#hand-lbl{font-size:8px;color:rgba(255,255,255,0.25);font-family:'Cinzel',serif;padding:0 10px 3px;}
+#hand-scroll{display:flex;gap:5px;padding:0 8px 4px;overflow-x:auto;overflow-y:visible;}
+#hand-scroll::-webkit-scrollbar{height:2px;}
+#hand-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);}
+.hand-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;}
+.bat-add-btn{font-size:7px;padding:2px 5px;background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.25);color:var(--gold);cursor:pointer;border-radius:4px;font-family:'Cinzel',serif;white-space:nowrap;}
+
+/* CARD */
+.card{width:84px;min-height:126px;background:linear-gradient(155deg,#181828 55%,#131828 100%);border-radius:8px;padding:5px;cursor:pointer;display:flex;flex-direction:column;gap:2px;position:relative;flex-shrink:0;transition:transform .15s,box-shadow .15s,opacity .15s;border:1.5px solid transparent;user-select:none;}
+.card.sel{transform:translateY(-8px) scale(1.05);}
+.card.dimmed{opacity:.35;}
+.card.nodrag{cursor:default;}
+.card.enchanted::after{content:'✨';position:absolute;top:2px;right:2px;font-size:9px;}
+.c-hdr{display:flex;justify-content:space-between;align-items:center;}
+.c-el{font-size:7px;font-family:'Cinzel',serif;border-radius:3px;padding:1px 3px;letter-spacing:.02em;}
+.c-cost{font-size:8px;font-family:'Cinzel',serif;color:var(--gold);background:rgba(240,192,64,0.12);border:1px solid rgba(240,192,64,0.3);border-radius:50%;width:15px;height:15px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.c-faction{font-size:7px;font-family:'Cinzel',serif;font-weight:700;text-align:center;letter-spacing:.04em;margin-top:1px;}
+.c-name{font-size:8px;font-family:'Cinzel',serif;color:var(--text);text-align:center;font-weight:600;line-height:1.2;}
+.c-sub{font-size:7px;font-style:italic;text-align:center;color:#8090c0;}
+.c-stats{display:flex;justify-content:space-around;margin-top:auto;padding-top:3px;border-top:1px solid rgba(255,255,255,0.08);}
+.c-sb{text-align:center;}.c-sl{font-size:6px;font-family:'Cinzel',serif;}.c-sv{font-size:11px;font-weight:700;}
+.c-atk-l{color:#e05555;}.c-hp-l{color:#50e090;}
+.c-eff{font-size:6px;color:var(--muted);font-style:italic;line-height:1.3;border-top:1px solid rgba(255,255,255,0.06);padding-top:2px;margin-top:1px;}
+.c-atk-dot{position:absolute;bottom:3px;right:3px;width:5px;height:5px;border-radius:50%;background:#e05555;box-shadow:0 0 4px #e05555;}
+
+/* SPELL TYPE BADGE on card */
+.c-spell-type{font-size:7px;font-family:'Cinzel',serif;font-weight:700;text-align:center;border-radius:3px;padding:1px 4px;margin-top:1px;}
+
+/* ZOOM */
+#card-zoom{display:none;position:fixed;inset:0;background:rgba(7,9,15,0.88);z-index:200;align-items:center;justify-content:center;}
+#card-zoom.show{display:flex;}
+#card-zoom-inner{width:220px;background:linear-gradient(155deg,#1a1a2e 50%,#131828 100%);border-radius:16px;padding:18px 14px;display:flex;flex-direction:column;gap:7px;box-shadow:0 0 40px rgba(0,0,0,0.8);}
+.zoom-hdr{display:flex;justify-content:space-between;align-items:center;}
+.zoom-el{font-size:11px;font-family:'Cinzel',serif;border-radius:4px;padding:2px 7px;}
+.zoom-cost{font-size:14px;font-family:'Cinzel',serif;color:var(--gold);background:rgba(240,192,64,0.15);border:1px solid rgba(240,192,64,0.4);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.zoom-faction{font-size:11px;font-family:'Cinzel',serif;font-weight:700;text-align:center;letter-spacing:.06em;}
+.zoom-name{font-size:15px;font-family:'Cinzel',serif;color:var(--text);text-align:center;font-weight:700;line-height:1.2;}
+.zoom-sub{font-size:11px;font-style:italic;text-align:center;color:#8090c0;}
+.zoom-spell-type{font-size:11px;font-family:'Cinzel',serif;font-weight:700;text-align:center;padding:3px 10px;border-radius:5px;border:1px solid;}
+.zoom-divider{height:1px;background:rgba(255,255,255,0.1);margin:2px 0;}
+.zoom-stats{display:flex;justify-content:space-around;}
+.zoom-sb{text-align:center;}.zoom-sl{font-size:10px;font-family:'Cinzel',serif;}.zoom-sv{font-size:22px;font-weight:700;}
+.zoom-eff{font-size:12px;color:#c0b0e0;font-style:italic;line-height:1.5;text-align:center;}
+.zoom-close{margin-top:4px;padding:8px;background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:'Cinzel',serif;font-size:12px;cursor:pointer;border-radius:6px;width:100%;}
+
+/* DECK MENU */
+#deck-menu{display:none;position:fixed;inset:0;background:var(--bg);z-index:150;flex-direction:column;align-items:center;justify-content:flex-start;padding:30px 20px;gap:18px;overflow-y:auto;}
+#deck-menu.show{display:flex;}
+#deck-menu h1{font-family:'Cinzel',serif;font-size:20px;color:var(--gold);text-shadow:0 0 12px rgba(240,192,64,0.4);letter-spacing:.1em;text-align:center;}
+#deck-menu h3{font-family:'Cinzel',serif;font-size:13px;color:var(--muted);text-align:center;}
+.deck-cols{display:flex;gap:14px;width:100%;max-width:500px;flex-wrap:wrap;justify-content:center;}
+.deck-col{flex:1;min-width:140px;display:flex;flex-direction:column;gap:8px;}
+.deck-col-title{font-family:'Cinzel',serif;font-size:11px;color:var(--muted);text-align:center;letter-spacing:.06em;}
+.deck-option{padding:10px 12px;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;text-align:center;}
+.deck-option:hover{border-color:var(--gold);background:var(--gold2);}
+.deck-option.selected{border-color:var(--gold);background:var(--gold2);box-shadow:0 0 10px rgba(240,192,64,0.2);}
+.deck-option-name{font-family:'Cinzel',serif;font-size:12px;font-weight:600;}
+.deck-option-desc{font-size:10px;color:var(--muted);font-style:italic;margin-top:2px;}
+.deck-count{font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px;}
+.start-game-btn{padding:13px 40px;background:transparent;border:2px solid var(--gold);color:var(--gold);font-family:'Cinzel',serif;font-size:14px;cursor:pointer;border-radius:8px;box-shadow:0 0 14px rgba(240,192,64,0.3);letter-spacing:.08em;transition:background .15s;}
+.start-game-btn:hover{background:var(--gold2);}
+
+/* QUICK SPELL MODAL (during opponent turn) */
+#quick-modal{display:none;position:fixed;inset:0;background:rgba(7,9,15,0.96);z-index:180;flex-direction:column;padding:20px 16px;}
+#quick-modal.show{display:flex;}
+#quick-title{font-family:'Cinzel',serif;font-size:14px;color:#ff9922;margin-bottom:4px;text-align:center;}
+#quick-sub{font-family:'Cinzel',serif;font-size:10px;color:var(--muted);text-align:center;margin-bottom:10px;}
+#quick-scroll{flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-content:flex-start;padding:4px;}
+#quick-cancel{margin-top:10px;padding:9px;background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:'Cinzel',serif;font-size:12px;cursor:pointer;border-radius:6px;}
+
+/* PICKER MODAL */
+#picker-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,15,0.96);z-index:160;flex-direction:column;padding:16px;}
+#picker-overlay.show{display:flex;}
+#picker-title{font-family:'Cinzel',serif;font-size:14px;color:var(--gold);margin-bottom:10px;text-align:center;}
+#picker-scroll{flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-content:flex-start;padding:4px;}
+#picker-cancel{margin-top:10px;padding:9px;background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:'Cinzel',serif;font-size:12px;cursor:pointer;border-radius:6px;}
+
+/* SPELL ANIM */
+#spell-anim{display:none;position:fixed;inset:0;z-index:300;pointer-events:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(7,9,15,0.75);}
+#spell-anim.show{display:flex;}
+#spell-anim-who{font-family:'Cinzel',serif;font-size:12px;text-align:center;letter-spacing:.08em;padding:4px 14px;border-radius:20px;border:1px solid;}
+#spell-anim-card{width:200px;background:linear-gradient(155deg,#1a1a2e 50%,#131828 100%);border-radius:14px;padding:16px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 0 60px rgba(0,0,0,0.9);animation:spellPop .25s ease-out forwards;}
+@keyframes spellPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes spellFade{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.1)}}
+#spell-anim.hiding #spell-anim-card,#spell-anim.hiding #spell-anim-who{animation:spellFade .3s ease-in forwards;}
+
+/* DISCARD PANEL */
+#discard-panel{position:fixed;inset:0;background:rgba(7,9,15,0.97);z-index:50;display:flex;flex-direction:column;padding:20px 16px 30px;transform:translateX(-100%);transition:transform .25s ease;}
+#discard-panel.open{transform:translateX(0);}
+#discard-panel-hdr{font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+#discard-close{font-size:22px;cursor:pointer;color:var(--muted);line-height:1;background:none;border:none;padding:4px 8px;}
+.discard-tabs{display:flex;gap:8px;margin-bottom:10px;}
+.discard-tab{font-family:'Cinzel',serif;font-size:11px;padding:4px 12px;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;}
+.discard-tab.active{border-color:var(--gold);color:var(--gold);background:var(--gold2);}
+#discard-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.discard-entry{font-size:12px;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;}
+.de-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.de-name{flex:1;color:var(--text);font-family:'Cinzel',serif;font-size:11px;}
+.de-type{font-size:10px;color:var(--muted);font-style:italic;}
+.de-stats{font-size:10px;color:var(--muted);}
+
+/* LOG PANEL */
+#log-panel{position:fixed;inset:0;background:rgba(7,9,15,0.97);z-index:50;display:flex;flex-direction:column;padding:20px 16px 30px;transform:translateX(100%);transition:transform .25s ease;}
+#log-panel.open{transform:translateX(0);}
+#log-panel-hdr{font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+#log-close{font-size:22px;cursor:pointer;color:var(--muted);line-height:1;background:none;border:none;padding:4px 8px;}
+#log-entries{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;}
+.log-e{font-size:13px;color:var(--muted);line-height:1.5;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.log-e.fresh{color:var(--text);}
+
+/* WINNER */
+#win-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,15,.95);flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:100;}
+#win-overlay.show{display:flex;}
+#win-txt{font-family:'Cinzel',serif;font-size:42px;font-weight:700;animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#win-sub{font-size:14px;color:var(--muted);font-style:italic;}
+.win-btns{display:flex;gap:12px;}
+.win-btn{padding:11px 24px;background:transparent;font-family:'Cinzel',serif;font-size:13px;cursor:pointer;border-radius:6px;}
+#replay-btn{border:2px solid var(--gold);color:var(--gold);box-shadow:0 0 14px rgba(240,192,64,0.3);}
+#menu-btn-win{border:2px solid var(--muted);color:var(--muted);}
+
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="hdr-title">✦ TCG Α·Ω ✦</div>
+  <div id="turn-badge">⚔ Votre tour</div>
+  <div id="hdr-actions">
+    <button class="hdr-btn end" id="btn-end" onclick="handleEndTurn()">⏭ Fin</button>
+    <button class="hdr-btn quick" id="btn-quick" onclick="openQuickModal()" style="display:none">⚡ Rapide</button>
+    <button class="hdr-btn muted" onclick="toggleDiscard()">🗑</button>
+    <button class="hdr-btn muted" onclick="toggleLog()">📜</button>
+  </div>
+</div>
+
+<div id="board">
+  <!-- IA -->
+  <div class="bat-row" id="ai-bat"><span class="bat-lbl">Batterie IA:</span></div>
+  <div class="p-row">
+    <span class="p-name ai">IA</span>
+    <span class="p-stat" id="ai-hp" style="color:var(--red)">❤️ 20</span>
+    <span class="p-stat" id="ai-nrg" style="color:var(--gold)">⚡ 0/0</span>
+    <span class="p-stat" id="ai-dk" style="color:var(--muted)">🃏 0</span>
+    <span class="p-stat" id="ai-blood" style="color:#20c060;display:none"></span>
+  </div>
+  <div class="field-wrap"><div class="field" id="ai-field"><div class="field-empty">Champ ennemi vide</div></div></div>
+  <div id="divider"></div>
+  <div class="field-wrap"><div class="field" id="pl-field"><div class="field-empty">Votre champ est vide</div></div></div>
+  <div class="p-row">
+    <span class="p-name pl">Joueur</span>
+    <span class="p-stat" id="pl-hp" style="color:var(--red)">❤️ 20</span>
+    <span class="p-stat" id="pl-nrg" style="color:var(--gold)">⚡ 0/0</span>
+    <span class="p-stat" id="pl-dk" style="color:var(--muted)">🃏 0</span>
+    <span class="p-stat" id="pl-blood" style="color:#20c060;display:none"></span>
+  </div>
+  <div class="bat-row" id="pl-bat"><span class="bat-lbl">Batterie:</span></div>
+  <div id="hand-area">
+    <div id="hand-lbl">Main (0) — Énergie: 0/0 ⚡</div>
+    <div id="hand-scroll"></div>
+  </div>
+</div>
+
+<!-- QUICK TOAST -->
+<div id="quick-toast">
+  <div id="quick-toast-title">⚡ Sort Rapide disponible ! <button id="quick-toast-close" onclick="dismissQuickToast()">✕</button></div>
+  <div id="quick-toast-cards"></div>
+</div>
+
+<!-- QUICK SPELL MODAL -->
+<div id="quick-modal">
+  <div id="quick-title">⚡ Sorts Rapides</div>
+  <div id="quick-sub">Jouez un sort rapide depuis votre main</div>
+  <div id="quick-scroll"></div>
+  <button id="quick-cancel" onclick="closeQuickModal()">Passer</button>
+</div>
+
+<!-- PICKER -->
+<div id="picker-overlay">
+  <div id="picker-title">Choisissez une carte</div>
+  <div id="picker-scroll"></div>
+  <button id="picker-cancel" onclick="pickerCancel()">Annuler</button>
+</div>
+
+<!-- CARD ZOOM -->
+<div id="card-zoom" onclick="closeZoom()">
+  <div id="card-zoom-inner">
+    <div class="zoom-hdr">
+      <span class="zoom-el" id="z-el"></span>
+      <span class="zoom-cost" id="z-cost"></span>
+    </div>
+    <div class="zoom-faction" id="z-fac"></div>
+    <div class="zoom-name" id="z-name"></div>
+    <div class="zoom-sub" id="z-sub"></div>
+    <div id="z-spell-type-wrap"></div>
+    <div class="zoom-divider"></div>
+    <div class="zoom-stats" id="z-stats"></div>
+    <div class="zoom-eff" id="z-eff"></div>
+    <button class="zoom-close" onclick="closeZoom()">Fermer</button>
+  </div>
+</div>
+
+<!-- DECK MENU -->
+<div id="deck-menu" class="show">
+  <h1>✦ TCG Α·Ω ✦</h1>
+  <h3>Choisissez vos decks</h3>
+  <div class="deck-cols">
+    <div class="deck-col">
+      <div class="deck-col-title">🧑 VOTRE DECK</div>
+      <div id="player-deck-options"></div>
+    </div>
+    <div class="deck-col">
+      <div class="deck-col-title">🤖 DECK IA</div>
+      <div id="ai-deck-options"></div>
+    </div>
+  </div>
+  <button class="start-game-btn" onclick="launchGame()">⚔ Commencer</button>
+</div>
+
+<!-- DISCARD -->
+<div id="discard-panel">
+  <div id="discard-panel-hdr">Défausse <button id="discard-close" onclick="toggleDiscard()">✕</button></div>
+  <div class="discard-tabs">
+    <button class="discard-tab active" id="dtab-player" onclick="switchDiscardTab('player')">🧑 Joueur</button>
+    <button class="discard-tab" id="dtab-ai" onclick="switchDiscardTab('ai')">🤖 IA</button>
+  </div>
+  <div id="discard-scroll"></div>
+</div>
+
+<!-- LOG -->
+<div id="log-panel">
+  <div id="log-panel-hdr">Journal <button id="log-close" onclick="toggleLog()">✕</button></div>
+  <div id="log-entries"></div>
+</div>
+
+<!-- SPELL ANIM -->
+<div id="spell-anim">
+  <div id="spell-anim-who"></div>
+  <div id="spell-anim-card"></div>
+</div>
+
+<!-- WINNER -->
+<div id="win-overlay">
+  <div id="win-txt"></div>
+  <div id="win-sub"></div>
+  <div class="win-btns">
+    <button class="win-btn" id="replay-btn" onclick="launchGame()">↺ Rejouer</button>
+    <button class="win-btn" id="menu-btn-win" onclick="showDeckMenu()">🏠 Menu</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+const EL={
+  FEU:{lb:"Feu",c:"#ff4d00",g:"#ff6a00"},EAU:{lb:"Eau",c:"#0099ff",g:"#00cfff"},
+  TERRE:{lb:"Terre",c:"#c8963e",g:"#e0b060"},AIR:{lb:"Air",c:"#90c8ff",g:"#c0e8ff"},
+  LUMIERE:{lb:"Lumière",c:"#f0c040",g:"#fff080"},TENEBRES:{lb:"Ténèbres",c:"#9b30ff",g:"#cc77ff"},
+  ELECTRIQUE:{lb:"Électrique",c:"#f0e000",g:"#fff060"},NEUTRE:{lb:"Neutre",c:"#888",g:"#aaa"},
+};
+const FACTION={
+  OMEGA:{lb:"Ω Oméga",c:"#e05540"},ALPHA:{lb:"Α Alpha",c:"#4080e0"},
+  BETA:{lb:"β Bêta",c:"#40c080"},DELTA:{lb:"Δ Delta",c:"#a060e0"},
+  THETA:{lb:"Θ Thêta",c:"#20c060"},NEUTRE:{lb:"Neutre",c:"#888"},
+};
+// Spell type styles
+const SPELL_TYPE_STYLE={
+  Rapide:    {c:"#ff9922",bg:"rgba(255,153,34,0.12)",label:"⚡ Rapide"},
+  Permanent: {c:"#a070f0",bg:"rgba(160,112,240,0.12)",label:"🔒 Permanent"},
+  Enchantement:{c:"#50e090",bg:"rgba(80,224,144,0.12)",label:"✨ Enchantement"},
+  Évolutif:  {c:"#0099ff",bg:"rgba(0,153,255,0.12)",label:"🌀 Évolutif"},
+};
+
+const DEFS=[
+  // OMEGA
+  {id:"o1",t:"invoke",fac:"OMEGA",n:"Oméga Éclaireur",el:"FEU",sub:"Combattant",cost:1,atk:2,mhp:2,copies:2,
+   eff:"Invocation : tous vos Ω gagnent +1 ATK.",onSummon:(w)=>{buffFaction(w,'OMEGA','atk',1);}},
+  {id:"o2",t:"invoke",fac:"OMEGA",n:"Oméga Berserker",el:"FEU",sub:"Combattant",cost:2,atk:4,mhp:2,copies:2,
+   eff:"Invocation : +2 ATK si un autre Ω est en jeu.",onSummon:(w)=>{if(countFaction(w,'OMEGA')>1)buffLastSummon(w,'atk',2);}},
+  {id:"o3",t:"invoke",fac:"OMEGA",n:"Oméga Lancier",el:"TERRE",sub:"Combattant",cost:2,atk:3,mhp:3,copies:2,eff:null},
+  {id:"o4",t:"invoke",fac:"OMEGA",n:"Oméga Mage Rouge",el:"FEU",sub:"Mage",cost:3,atk:4,mhp:3,copies:2,
+   eff:"Invocation : inflige 1 dégât à chaque invoqué adverse.",onSummon:(w,_,o)=>{splashDmg(o,1);}},
+  {id:"o5",t:"invoke",fac:"OMEGA",n:"Oméga Titan",el:"FEU",sub:"Combattant",cost:4,atk:6,mhp:4,copies:2,
+   eff:"Invocation : tous vos Ω gagnent +2 ATK.",onSummon:(w)=>{buffFaction(w,'OMEGA','atk',2);}},
+  {id:"o6",t:"invoke",fac:"OMEGA",n:"Oméga Seigneur",el:"FEU",sub:"Combattant",cost:5,atk:7,mhp:5,copies:2,
+   eff:"Invocation : +3 ATK à tous vos Ω.",onSummon:(w)=>{buffFaction(w,'OMEGA','atk',3);}},
+  {id:"o_esp",t:"invoke",fac:"OMEGA",n:"Esprit Oméga",el:"FEU",sub:"Esprit",cost:1,atk:0,mhp:1,copies:2,
+   eff:"Invocation & Mort : ajoutez 1 carte Ω depuis le deck.",
+   onSummon:(w)=>{schedulePick(w,'OMEGA',1,'Esprit Oméga — choisissez 1 carte Ω');},
+   onDeath:(w)=>{schedulePick(w,'OMEGA',1,'Esprit Oméga détruit — choisissez 1 carte Ω');}},
+  // ALPHA
+  {id:"a1",t:"invoke",fac:"ALPHA",n:"Alpha Sentinelle",el:"TERRE",sub:"Combattant",cost:1,atk:1,mhp:4,copies:2,
+   eff:"Invocation : tous vos Α gagnent +2 PV.",onSummon:(w)=>{buffFaction(w,'ALPHA','mhp',2);}},
+  {id:"a2",t:"invoke",fac:"ALPHA",n:"Alpha Gardien",el:"TERRE",sub:"Combattant",cost:2,atk:2,mhp:5,copies:2,
+   eff:"Invocation : +3 PV si un autre Α est en jeu.",onSummon:(w)=>{if(countFaction(w,'ALPHA')>1)buffLastSummon(w,'mhp',3);}},
+  {id:"a3",t:"invoke",fac:"ALPHA",n:"Alpha Chevalier",el:"LUMIERE",sub:"Combattant",cost:2,atk:2,mhp:5,copies:2,eff:null},
+  {id:"a4",t:"invoke",fac:"ALPHA",n:"Alpha Prêtre",el:"LUMIERE",sub:"Mage",cost:3,atk:1,mhp:4,copies:2,
+   eff:"Invocation : soigne 3 PV à un allié au choix.",onSummon:(w)=>{scheduleHeal(w,3);}},
+  {id:"a5",t:"invoke",fac:"ALPHA",n:"Alpha Bastion",el:"TERRE",sub:"Combattant",cost:3,atk:2,mhp:7,copies:2,
+   eff:"Invocation : tous vos Α gagnent +3 PV.",onSummon:(w)=>{buffFaction(w,'ALPHA','mhp',3);}},
+  {id:"a6",t:"invoke",fac:"ALPHA",n:"Alpha Colosse",el:"TERRE",sub:"Combattant",cost:5,atk:3,mhp:10,copies:2,
+   eff:"Invocation : restaure les PV max de tous vos Α.",onSummon:(w)=>{healFaction(w,'ALPHA');}},
+  {id:"a_esp",t:"invoke",fac:"ALPHA",n:"Esprit Alpha",el:"LUMIERE",sub:"Esprit",cost:1,atk:0,mhp:1,copies:2,
+   eff:"Invocation & Mort : ajoutez 1 carte Α depuis le deck.",
+   onSummon:(w)=>{schedulePick(w,'ALPHA',1,'Esprit Alpha — choisissez 1 carte Α');},
+   onDeath:(w)=>{schedulePick(w,'ALPHA',1,'Esprit Alpha détruit — choisissez 1 carte Α');}},
+  // BETA
+  {id:"b1",t:"invoke",fac:"BETA",n:"Bêta Canaliseur",el:"ELECTRIQUE",sub:"Mage",cost:1,atk:1,mhp:2,copies:2,
+   eff:"Invocation : gagnez +1 énergie.",onSummon:(w)=>{gainEnergy(w,1);}},
+  {id:"b2",t:"invoke",fac:"BETA",n:"Bêta Dynamo",el:"ELECTRIQUE",sub:"Mage",cost:2,atk:1,mhp:3,copies:2,
+   eff:"Invocation : gagnez +2 énergie.",onSummon:(w)=>{gainEnergy(w,2);}},
+  {id:"b3",t:"invoke",fac:"BETA",n:"Bêta Accélérateur",el:"ELECTRIQUE",sub:"Combattant",cost:2,atk:2,mhp:3,copies:2,
+   eff:"Invocation : réduisez le coût de votre prochaine carte de 1.",onSummon:(w)=>{setDiscount(w,1);}},
+  {id:"b4",t:"invoke",fac:"BETA",n:"Bêta Réacteur",el:"ELECTRIQUE",sub:"Mage",cost:3,atk:1,mhp:4,copies:2,
+   eff:"Invocation : gagnez +3 énergie.",onSummon:(w)=>{gainEnergy(w,3);}},
+  {id:"b5",t:"invoke",fac:"BETA",n:"Bêta Saboteur",el:"ELECTRIQUE",sub:"Combattant",cost:2,atk:2,mhp:2,copies:2,
+   eff:"Invocation : l'adversaire perd 2 énergie ce tour.",onSummon:(w,_,o)=>{drainEnergy(o,2);}},
+  {id:"b6",t:"invoke",fac:"BETA",n:"Bêta Surcharge",el:"ELECTRIQUE",sub:"Mage",cost:4,atk:2,mhp:4,copies:2,
+   eff:"Invocation : gagnez +4 énergie.",onSummon:(w)=>{gainEnergy(w,4);}},
+  {id:"b_esp",t:"invoke",fac:"BETA",n:"Esprit Bêta",el:"ELECTRIQUE",sub:"Esprit",cost:1,atk:1,mhp:2,copies:1,
+   eff:"Mort : placez 1 carte β du deck en zone batterie.",
+   onDeath:(w)=>{scheduleBatteryPick(w,'BETA','Esprit Bêta — choisissez 1 carte β pour la batterie');}},
+  // DELTA
+  {id:"d1",t:"invoke",fac:"DELTA",n:"Delta Fusionneur",el:"TENEBRES",sub:"Combattant",cost:3,atk:4,mhp:5,copies:2,
+   eff:"Invocation : +1 ATK par Ω allié, +1 PV par Α allié.",
+   onSummon:(w)=>{const o=countFaction(w,'OMEGA');const a=countFaction(w,'ALPHA');buffLastSummon(w,'atk',o);buffLastSummon(w,'mhp',a);}},
+  {id:"d2",t:"invoke",fac:"DELTA",n:"Delta Équilibre",el:"TENEBRES",sub:"Mage",cost:4,atk:3,mhp:6,copies:2,
+   eff:"Invocation : si Ω et Α en jeu, +2 ATK et +2 PV.",
+   onSummon:(w)=>{if(countFaction(w,'OMEGA')>0&&countFaction(w,'ALPHA')>0){buffLastSummon(w,'atk',2);buffLastSummon(w,'mhp',2);}}},
+  {id:"d3",t:"invoke",fac:"DELTA",n:"Delta Dominateur",el:"TENEBRES",sub:"Combattant",cost:5,atk:6,mhp:7,copies:2,
+   eff:"Invocation : +2 ATK et +2 PV par faction alliée en jeu.",
+   onSummon:(w)=>{const f=uniqueFactions(w);buffLastSummon(w,'atk',f*2);buffLastSummon(w,'mhp',f*2);}},
+  {id:"d4",t:"invoke",fac:"DELTA",n:"Delta Absolu",el:"TENEBRES",sub:"Combattant",cost:6,atk:8,mhp:8,copies:2,
+   eff:"Invocation : 2 dégâts à tous les ennemis. +3 ATK si Ω en jeu.",
+   onSummon:(w,_,o)=>{splashDmg(o,2);if(countFaction(w,'OMEGA')>0)buffLastSummon(w,'atk',3);}},
+  {id:"d_esp",t:"invoke",fac:"DELTA",n:"Esprit Delta",el:"TENEBRES",sub:"Esprit",cost:2,atk:1,mhp:3,copies:2,
+   eff:"Esprit résistant.",onSummon:null,onDeath:null},
+
+  // SORTS — OMEGA
+  {id:"so1",t:"spell",fac:"OMEGA",n:"Rage Oméga",el:"FEU",sub:"Rapide",cost:2,copies:2,
+   eff:"Tous vos Ω gagnent +3 ATK.",
+   onPlay:(w)=>{buffFaction(w,'OMEGA','atk',3);}},
+  {id:"so2",t:"spell",fac:"OMEGA",n:"Percée Enflammée",el:"FEU",sub:"Rapide",cost:3,copies:2,
+   eff:"Inflige 4 dégâts au joueur adverse.",
+   onPlay:(_,o)=>{dmgPlayer(o,4);}},
+  {id:"so3",t:"spell",fac:"OMEGA",n:"Explosion Oméga",el:"FEU",sub:"Rapide",cost:4,copies:2,
+   eff:"Inflige 3 dégâts à tous les invoqués adverses.",
+   onPlay:(_,o)=>{splashDmg(o,3);}},
+  {id:"so4",t:"spell",fac:"OMEGA",n:"Flamme Éternelle",el:"FEU",sub:"Permanent",cost:3,copies:2,
+   eff:"Permanent : tous vos invoqués infligent +1 dégât supplémentaire.",
+   onPlay:(w)=>{G[w].permanents.push({id:'so4',n:'Flamme Éternelle',eff:'atk_bonus',val:1,owner:w});applyPermanentEffects(w);log('Flamme Éternelle en jeu : +1 ATK à tous !');}},
+  // SORTS — ALPHA
+  {id:"sa1",t:"spell",fac:"ALPHA",n:"Bouclier Alpha",el:"LUMIERE",sub:"Rapide",cost:1,copies:2,
+   eff:"Tous vos Α gagnent +3 PV.",
+   onPlay:(w)=>{buffFaction(w,'ALPHA','mhp',3);}},
+  {id:"sa2",t:"spell",fac:"ALPHA",n:"Résurgence Alpha",el:"LUMIERE",sub:"Permanent",cost:2,copies:2,
+   eff:"Permanent : restaure 1 PV à tous vos invoqués à chaque fin de tour.",
+   onPlay:(w)=>{G[w].permanents.push({id:'sa2',n:'Résurgence Alpha',eff:'regen',val:1,owner:w});log('Résurgence Alpha en jeu : régénération active !');}},
+  {id:"sa3",t:"spell",fac:"ALPHA",n:"Forteresse Alpha",el:"TERRE",sub:"Enchantement",cost:3,copies:2,
+   eff:"Un allié ciblé gagne +5 PV max. Détruit avec lui.",
+   onPlay:(w)=>{scheduleBuffAlly(w,'mhp',5,'Forteresse Alpha — choisissez un allié (+5 PV)',true);}},
+  // SORTS — BETA
+  {id:"sb1",t:"spell",fac:"BETA",n:"Surcharge Bêta",el:"ELECTRIQUE",sub:"Rapide",cost:1,copies:2,
+   eff:"Gagnez +2 énergie.",onPlay:(w)=>{gainEnergy(w,2);}},
+  {id:"sb2",t:"spell",fac:"BETA",n:"Court-Circuit",el:"ELECTRIQUE",sub:"Rapide",cost:2,copies:2,
+   eff:"L'adversaire perd 3 énergie.",onPlay:(_,o)=>{drainEnergy(o,3);}},
+  {id:"sb3",t:"spell",fac:"BETA",n:"Hypercharge",el:"ELECTRIQUE",sub:"Permanent",cost:3,copies:2,
+   eff:"Permanent : gagnez +1 énergie supplémentaire au début de chaque tour.",
+   onPlay:(w)=>{G[w].permanents.push({id:'sb3',n:'Hypercharge',eff:'energy_bonus',val:1,owner:w});log('Hypercharge en jeu : +1 énergie/tour !');}},
+  // SORTS — DELTA
+  {id:"sd1",t:"spell",fac:"DELTA",n:"Convergence Delta",el:"TENEBRES",sub:"Rapide",cost:3,copies:2,
+   eff:"Tous vos invoqués gagnent +2 ATK et +2 PV.",
+   onPlay:(w)=>{buffAll(w,'atk',2);buffAll(w,'mhp',2);}},
+  {id:"sd2",t:"spell",fac:"DELTA",n:"Fracture Delta",el:"TENEBRES",sub:"Rapide",cost:4,copies:2,
+   eff:"2 dégâts à tous les invoqués adverses et 2 dégâts au joueur ennemi.",
+   onPlay:(_,o)=>{splashDmg(o,2);dmgPlayer(o,2);}},
+  {id:"sd3",t:"spell",fac:"DELTA",n:"Pacte Delta",el:"TENEBRES",sub:"Enchantement",cost:2,copies:2,
+   eff:"L'invoqué ciblé compte comme toutes les factions alliées.",
+   onPlay:(w)=>{scheduleBuffAlly(w,'multiFacton',0,'Pacte Delta — choisissez un allié (toutes factions)',false);}},
+  // MAÎTRESSE
+  {id:"m1",t:"spell",fac:"NEUTRE",n:"Univers Α·Ω",el:"NEUTRE",sub:"Permanent",cost:5,copies:1,
+   eff:"Permanent : vos Α comptent aussi comme Ω et vice-versa.",
+   onPlay:(w)=>{G[w].permanents.push({id:'m1',n:'Univers Α·Ω',eff:'universe',val:0,owner:w});G[w].universeActive=true;log('Univers Α·Ω ! Alpha ↔ Oméga !');}},
+
+  // ─── THETA (Sacrifice & Cycle) ──────────
+  // Invoqués Θ
+  {id:"t1",t:"invoke",fac:"THETA",n:"Θ Graine Mourante",el:"TERRE",sub:"Esprit",cost:1,atk:1,mhp:2,copies:2,
+   eff:"Mort : gagne 2🩸. Le prochain Θ invoqué reçoit +2 ATK.",
+   onDeath:(w)=>{gainBlood(w,2);G[w].nextThetaBuff=(G[w].nextThetaBuff||0)+2;log('Graine Mourante — +2🩸, prochain Θ +2 ATK !');}},
+  {id:"t2",t:"invoke",fac:"THETA",n:"Θ Dévoreur",el:"TERRE",sub:"Combattant",cost:2,atk:3,mhp:3,copies:2,
+   eff:"Invocation : gagne +2 ATK par 🩸 consommé (max 3🩸).",
+   onSummon:(w)=>{const b=Math.min(G[w].blood||0,3);if(b>0){spendBlood(w,b);buffLastSummon(w,'atk',b*2);log(`Θ Dévoreur dévore ${b}🩸 → +${b*2} ATK !`);}}},
+  {id:"t3",t:"invoke",fac:"THETA",n:"Θ Offrande Vivante",el:"AIR",sub:"Esprit",cost:1,atk:0,mhp:3,copies:2,
+   eff:"Peut être sacrifié par n'importe quelle carte Θ comme coût. Mort : +1🩸.",
+   onDeath:(w)=>{gainBlood(w,1);}},
+  {id:"t4",t:"invoke",fac:"THETA",n:"Θ Faucheur du Cycle",el:"TERRE",sub:"Combattant",cost:3,atk:4,mhp:4,copies:2,
+   eff:"Invocation : inflige 1 dégât par 🩸 à l'adversaire (max 5🩸 consommés).",
+   onSummon:(w,_,o)=>{const b=Math.min(G[w].blood||0,5);if(b>0){spendBlood(w,b);dmgPlayer(o,b);log(`Θ Faucheur consomme ${b}🩸 → ${b} dégâts !`);}}},
+  {id:"t5",t:"invoke",fac:"THETA",n:"Θ Régénérateur",el:"AIR",sub:"Mage",cost:3,atk:2,mhp:5,copies:2,
+   eff:"Invocation : soigne 2 PV à tous vos Θ alliés. Mort : +2🩸.",
+   onSummon:(w)=>{G[w].field.filter(c=>c.fac==='THETA').forEach(c=>{c.hp=Math.min(c.mhp,c.hp+2);});log('Θ Régénérateur soigne tous les Θ !')},
+   onDeath:(w)=>{gainBlood(w,2);}},
+  {id:"t6",t:"invoke",fac:"THETA",n:"Θ Archidruide",el:"TERRE",sub:"Mage",cost:4,atk:3,mhp:6,copies:2,
+   eff:"Invocation : tous vos Θ gagnent +1 ATK et +1 PV par 🩸 (consomme 1🩸).",
+   onSummon:(w)=>{if((G[w].blood||0)>=1){spendBlood(w,1);buffFaction(w,'THETA','atk',1);buffFaction(w,'THETA','mhp',1);log('Θ Archidruide canalise le cycle !');}else log('Θ Archidruide — pas de 🩸 disponible.');}},
+  {id:"t7",t:"invoke",fac:"THETA",n:"Θ Colosse Rituel",cost:0,el:"TERRE",sub:"Combattant",atk:8,mhp:10,copies:2,
+   eff:"Coût : sacrifiez 3 invoqués Θ (coût en énergie = 0). Gagne +2 ATK par 🩸 en réserve.",
+   ritualCost:3,ritualFac:'THETA',
+   onSummon:(w)=>{const b=G[w].blood||0;if(b>0){buffLastSummon(w,'atk',b*2);log(`Θ Colosse : ${b}🩸 disponible → +${b*2} ATK !`);}}},
+  {id:"t8",t:"invoke",fac:"THETA",n:"Θ Esprit du Retour",el:"AIR",sub:"Esprit",cost:2,atk:1,mhp:2,copies:2,
+   eff:"Mort : ajoutez 1 carte Θ aléatoire depuis la défausse en main. +1🩸.",
+   onDeath:(w)=>{gainBlood(w,1);const pool=G[w].discard.filter(c=>c.fac==='THETA'&&c.t==='invoke');if(pool.length){const c=pool[Math.floor(Math.random()*pool.length)];G[w].discard=G[w].discard.filter(x=>x.uid!==c.uid);const fresh={...c,hp:c.mhp,hasAttacked:false,buffAtk:0,buffMhp:0,baseAtk:c.baseAtk||c.atk,baseMhp:c.baseMhp||c.mhp,enchantments:[]};G[w].hand.push(fresh);log(`Θ Esprit du Retour ramène ${c.n} depuis la défausse !`);}else log('Θ Esprit du Retour — défausse Θ vide.');}},
+  {id:"t9",t:"invoke",fac:"THETA",n:"Θ Nexus Sacrificiel",el:"TERRE",sub:"Combattant",cost:4,atk:5,mhp:7,copies:2,
+   eff:"Invocation : pour chaque Θ en jeu, gagne +1 ATK et +1 PV.",
+   onSummon:(w)=>{const n=countFaction(w,'THETA')-1;if(n>0){buffLastSummon(w,'atk',n);buffLastSummon(w,'mhp',n);log(`Θ Nexus : ${n} Θ alliés → +${n} ATK/PV !`);}}},
+
+  // Sorts Θ
+  {id:"st1",t:"spell",fac:"THETA",n:"Θ Offrande de Sang",el:"TERRE",sub:"Rapide",cost:1,copies:2,
+   eff:"Sacrifiez 1 invoqué Θ allié → +3🩸 et inflige son ATK en dégâts à l'adversaire.",
+   onPlay:(w,o)=>{scheduleSacrifice(w,'THETA',1,'Offrande de Sang — sacrifiez 1 Θ',(c)=>{gainBlood(w,3);dmgPlayer(o,c.atk);log(`Offrande de Sang : ${c.n} sacrifié → +3🩸, ${c.atk} dégâts !`);});}},
+  {id:"st2",t:"spell",fac:"THETA",n:"Θ Rituel de Puissance",el:"TERRE",sub:"Rapide",cost:2,copies:2,
+   eff:"Consomme 3🩸 → tous vos Θ gagnent +3 ATK.",
+   onPlay:(w)=>{if((G[w].blood||0)>=3){spendBlood(w,3);buffFaction(w,'THETA','atk',3);log('Rituel de Puissance : 3🩸 → +3 ATK à tous les Θ !');}else log(`Rituel de Puissance — pas assez de 🩸 (${G[w].blood||0}/3).`);}},
+  {id:"st3",t:"spell",fac:"THETA",n:"Θ Cycle Éternel",el:"AIR",sub:"Permanent",cost:3,copies:2,
+   eff:"Permanent : chaque Θ détruit génère +1🩸 supplémentaire.",
+   onPlay:(w)=>{G[w].permanents.push({id:'st3',n:'Θ Cycle Éternel',eff:'theta_death_blood',val:1,owner:w});log('Θ Cycle Éternel : chaque mort Θ = +1🩸 bonus !');}},
+  {id:"st4",t:"spell",fac:"THETA",n:"Θ Grande Faucille",el:"TERRE",sub:"Rapide",cost:3,copies:2,
+   eff:"Sacrifiez n'importe quel allié → inflige 3× son ATK à un invoqué adverse.",
+   onPlay:(w,o)=>{scheduleSacrifice(w,'ANY',1,'Grande Faucille — sacrifiez 1 allié',(c)=>{const dmg=c.atk*3;if(o==='ai'&&G.ai.field.length){const tgt=G.ai.field[Math.floor(Math.random()*G.ai.field.length)];tgt.hp-=dmg;log(`Grande Faucille : ${c.n} sacrifié → ${dmg} dégâts à ${tgt.n} !`);if(tgt.hp<=0){G.ai.field=G.ai.field.filter(x=>x.uid!==tgt.uid);G.ai.discard.push(tgt);triggerEffect(tgt,'onDeath','ai','player');}}else{dmgPlayer(o,dmg);log(`Grande Faucille : ${c.n} sacrifié → ${dmg} dégâts directs !`);}});}},
+  {id:"st5",t:"spell",fac:"THETA",n:"Θ Sang du Renouveau",el:"AIR",sub:"Rapide",cost:2,copies:2,
+   eff:"Consomme 2🩸 → piochez 2 cartes.",
+   onPlay:(w)=>{if((G[w].blood||0)>=2){spendBlood(w,2);drawN(w,2);log('Sang du Renouveau : 2🩸 → +2 cartes !');}else log(`Sang du Renouveau — pas assez de 🩸 (${G[w].blood||0}/2).`);}},
+  {id:"st6",t:"spell",fac:"THETA",n:"Θ Ascension Rituelle",el:"TERRE",sub:"Évolutif",cost:0,copies:2,
+   eff:"Coût : 5🩸. Invoquez Θ Colosse Rituel depuis votre deck ou main.",
+   onPlay:(w)=>{if((G[w].blood||0)>=5){spendBlood(w,5);scheduleRitualSummon(w,'t7','Ascension Rituelle — invoquez le Θ Colosse !');}else log(`Ascension Rituelle — pas assez de 🩸 (${G[w].blood||0}/5).`);}},
+];
+
+// ══════════════════════════════════════════
+// DECK PRESETS
+// ══════════════════════════════════════════
+const DECK_PRESETS=[
+  {id:"mixed",name:"Deck Mixte",color:"#888",desc:"Toutes factions",
+   build:()=>capDeck(DEFS.flatMap(d=>Array(d.copies||2).fill(null).map((_,i)=>mkInstance(d,i))))},
+  {id:"omega_rush",name:"Rush Ω",color:"#e05540",desc:"Attaque pure",
+   build:()=>buildCustom([{id:"o1",n:2},{id:"o2",n:2},{id:"o3",n:2},{id:"o4",n:2},{id:"o5",n:2},{id:"o6",n:2},{id:"o_esp",n:2},{id:"so1",n:2},{id:"so2",n:2},{id:"so3",n:2},{id:"so4",n:2},{id:"b1",n:2},{id:"b2",n:2},{id:"sb1",n:2},{id:"sd1",n:2}])},
+  {id:"alpha_wall",name:"Forteresse Α",color:"#4080e0",desc:"Défense max",
+   build:()=>buildCustom([{id:"a1",n:2},{id:"a2",n:2},{id:"a3",n:2},{id:"a4",n:2},{id:"a5",n:2},{id:"a6",n:2},{id:"a_esp",n:2},{id:"sa1",n:2},{id:"sa2",n:2},{id:"sa3",n:2},{id:"b3",n:2},{id:"b4",n:2},{id:"sb1",n:2},{id:"sd1",n:2}])},
+  {id:"beta_engine",name:"Machine β",color:"#40c080",desc:"Moteur énergie",
+   build:()=>buildCustom([{id:"b1",n:2},{id:"b2",n:2},{id:"b3",n:2},{id:"b4",n:2},{id:"b5",n:2},{id:"b6",n:2},{id:"b_esp",n:1},{id:"sb1",n:2},{id:"sb2",n:2},{id:"sb3",n:2},{id:"o1",n:2},{id:"o2",n:2},{id:"o3",n:2},{id:"so1",n:2},{id:"d1",n:2}])},
+  {id:"delta_power",name:"Puissance Δ",color:"#a060e0",desc:"Synergies max",
+   build:()=>buildCustom([{id:"d1",n:2},{id:"d2",n:2},{id:"d3",n:2},{id:"d4",n:2},{id:"d_esp",n:2},{id:"sd1",n:2},{id:"sd2",n:2},{id:"o1",n:2},{id:"o2",n:2},{id:"o_esp",n:2},{id:"a1",n:2},{id:"a5",n:2},{id:"a_esp",n:2},{id:"b2",n:2},{id:"sb1",n:2},{id:"m1",n:1}])},
+  {id:"theta_pure",name:"Cycle Θ",color:"#20c060",desc:"Sacrifice & renaissance",
+   build:()=>buildCustom([{id:"t1",n:2},{id:"t2",n:2},{id:"t3",n:2},{id:"t4",n:2},{id:"t5",n:2},{id:"t6",n:2},{id:"t7",n:2},{id:"t8",n:2},{id:"t9",n:2},{id:"st1",n:2},{id:"st2",n:2},{id:"st3",n:2},{id:"st4",n:2},{id:"st5",n:2},{id:"st6",n:2}])},
+];
+
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mkInstance(def,idx){return{...def,uid:`${def.id}_${idx}_${Math.random().toString(36).slice(2)}`,hp:def.mhp||null,hasAttacked:false,baseAtk:def.atk,baseMhp:def.mhp||0,buffAtk:0,buffMhp:0,enchantments:[]};}
+function buildCustom(list){let c=[];list.forEach(({id,n})=>{const d=DEFS.find(x=>x.id===id);if(d)for(let i=0;i<n;i++)c.push(mkInstance(d,c.length+i));});return capDeck(c);}
+function capDeck(cards){return shuffle(cards).slice(0,50);}
+function drawN(who,n){for(let i=0;i<n;i++){if(!G[who].deck.length)break;G[who].hand.push(G[who].deck.shift());}}
+
+// ══════════════════════════════════════════
+// DECK MENU
+// ══════════════════════════════════════════
+let selPDeck='mixed',selADeck='omega_rush';
+function showDeckMenu(){document.getElementById('win-overlay').classList.remove('show');document.getElementById('deck-menu').classList.add('show');renderDeckMenu();}
+function renderDeckMenu(){
+  ['player-deck-options','ai-deck-options'].forEach((cid,isAI)=>{
+    const sel=isAI?selADeck:selPDeck;
+    const cont=document.getElementById(cid);cont.innerHTML='';cont.style.cssText='display:flex;flex-direction:column;gap:8px;';
+    DECK_PRESETS.forEach(p=>{
+      const d=document.createElement('div');d.className='deck-option'+(sel===p.id?' selected':'');
+      const deck=p.build();
+      d.innerHTML=`<div class="deck-option-name" style="color:${p.color}">${p.name}</div><div class="deck-option-desc">${p.desc}</div><div class="deck-count">${deck.length} cartes</div>`;
+      d.onclick=()=>{if(isAI)selADeck=p.id;else selPDeck=p.id;renderDeckMenu();};
+      cont.appendChild(d);
+    });
+  });
+}
+function launchGame(){
+  document.getElementById('deck-menu').classList.remove('show');
+  document.getElementById('win-overlay').classList.remove('show');
+  const pD=DECK_PRESETS.find(p=>p.id===selPDeck).build();
+  const aD=DECK_PRESETS.find(p=>p.id===selADeck).build();
+  startGame(pD,aD);
+}
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let G={};
+let logOpen=false,discardOpen=false,discardTab='player';
+let pickerCb=null,pickerCancelCb=null;
+let spellAnimTimer=null;
+
+function mkState(deck){return{hp:20,deck,hand:[],field:[],battery:[],energy:0,batPlaced:false,discount:0,universeActive:false,permanents:[],discard:[],blood:0,nextThetaBuff:0};}
+
+function startGame(pDeck,aDeck){
+  G={turn:'player',phase:'main',selAtk:[],logs:[]};
+  G.player=mkState(pDeck);G.ai=mkState(aDeck);
+  drawN('player',7);drawN('ai',7);
+  log('Partie commencée ! 7 cartes, set Α·Ω.');
+  updateQuickBtn();render();
+}
+
+// ══════════════════════════════════════════
+// LOG
+// ══════════════════════════════════════════
+function log(m){G.logs.push(m);if(G.logs.length>60)G.logs.shift();}
+function toggleLog(){logOpen=!logOpen;document.getElementById('log-panel').classList.toggle('open',logOpen);if(logOpen)renderLog();}
+function renderLog(){const el=document.getElementById('log-entries');el.innerHTML='';[...G.logs].reverse().forEach((m,i)=>{const d=document.createElement('div');d.className='log-e'+(i===0?' fresh':'');d.textContent=m;el.appendChild(d);});}
+function toggleDiscard(){discardOpen=!discardOpen;document.getElementById('discard-panel').classList.toggle('open',discardOpen);if(discardOpen)renderDiscard();}
+function switchDiscardTab(t){discardTab=t;document.getElementById('dtab-player').classList.toggle('active',t==='player');document.getElementById('dtab-ai').classList.toggle('active',t==='ai');renderDiscard();}
+function renderDiscard(){
+  const sc=document.getElementById('discard-scroll');sc.innerHTML='';
+  const pile=G[discardTab]?.discard||[];
+  if(!pile.length){const e=document.createElement('div');e.style.cssText='color:rgba(255,255,255,0.2);font-style:italic;font-size:13px;padding:20px;text-align:center;';e.textContent='Défausse vide';sc.appendChild(e);return;}
+  [...pile].reverse().forEach(card=>{
+    const f=fd(card.fac),isInv=card.t==='invoke';
+    const d=document.createElement('div');d.className='discard-entry';
+    const dot=document.createElement('div');dot.className='de-dot';dot.style.background=f.c;
+    const nm=document.createElement('div');nm.className='de-name';nm.textContent=card.n;
+    const tp=document.createElement('div');tp.className='de-type';tp.textContent=isInv?card.sub:'Sort '+card.sub;
+    d.appendChild(dot);d.appendChild(nm);d.appendChild(tp);
+    if(isInv){const st=document.createElement('div');st.className='de-stats';st.textContent=`ATK ${card.baseAtk||card.atk} / PV ${card.baseMhp||card.mhp}`;d.appendChild(st);}
+    sc.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════
+// SPELL ANIMATION
+// ══════════════════════════════════════════
+function showSpellAnim(card,who){
+  if(spellAnimTimer){clearTimeout(spellAnimTimer);spellAnimTimer=null;}
+  const f=fd(card.fac),e=ed(card.el),st=SPELL_TYPE_STYLE[card.sub]||{c:'#888',label:card.sub};
+  const ov=document.getElementById('spell-anim');ov.classList.remove('hiding');
+  const whoEl=document.getElementById('spell-anim-who');
+  whoEl.textContent=who==='player'?'✦ Vous jouez ✦':"✦ L'IA joue ✦";
+  whoEl.style.color=who==='player'?'#50e090':'#e07070';whoEl.style.borderColor=who==='player'?'#50e090':'#e07070';
+  const cardEl=document.getElementById('spell-anim-card');
+  cardEl.style.cssText=`width:200px;background:linear-gradient(155deg,#1a1a2e 50%,#131828 100%);border-radius:14px;padding:16px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 0 60px rgba(0,0,0,0.9);border:1.5px solid ${f.c}99;animation:spellPop .25s ease-out forwards;`;
+  cardEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:10px;font-family:'Cinzel',serif;color:${e.c};border:1px solid ${e.c}44;background:${e.c}15;border-radius:3px;padding:1px 6px;">${e.lb}</span>
+      <span style="font-size:12px;font-family:'Cinzel',serif;color:var(--gold);background:rgba(240,192,64,0.15);border:1px solid rgba(240,192,64,0.4);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;">${card.cost}</span>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:11px;font-weight:700;text-align:center;color:${f.c};">${f.lb}</div>
+    <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;text-align:center;color:var(--text);">${card.n}</div>
+    <div style="font-size:11px;font-family:'Cinzel',serif;font-weight:700;text-align:center;color:${st.c};background:${st.bg};border:1px solid ${st.c}55;border-radius:4px;padding:2px 8px;">${st.label}</div>
+    <div style="height:1px;background:rgba(255,255,255,0.1);"></div>
+    <div style="font-size:12px;color:#c0b0e0;font-style:italic;line-height:1.5;text-align:center;">${card.eff||''}</div>`;
+  ov.classList.add('show');
+  spellAnimTimer=setTimeout(()=>{ov.classList.add('hiding');spellAnimTimer=setTimeout(()=>{ov.classList.remove('show','hiding');spellAnimTimer=null;},320);},2000);
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function ed(k){return EL[k]||{lb:k,c:'#888',g:'#aaa'};}
+function fd(k){return FACTION[k]||{lb:k,c:'#888'};}
+function cardFactions(card,who){
+  const s=new Set([card.fac]);
+  if(G[who].universeActive){if(card.fac==='OMEGA')s.add('ALPHA');if(card.fac==='ALPHA')s.add('OMEGA');}
+  if(card.allFactions)['OMEGA','ALPHA','BETA','DELTA'].forEach(f=>s.add(f));
+  return s;
+}
+function countFaction(who,fac){return G[who].field.filter(c=>cardFactions(c,who).has(fac)).length;}
+function uniqueFactions(who){return new Set(G[who].field.map(c=>c.fac)).size;}
+
+function gainEnergy(who,n){G[who].energy+=n;log(`${who==='player'?'Vous gagnez':'IA gagne'} +${n} énergie !`);}
+function drainEnergy(who,n){G[who].energy=Math.max(0,G[who].energy-n);log(`${who==='player'?'Vous perdez':'IA perd'} ${n} énergie !`);}
+function dmgPlayer(who,n){G[who].hp=Math.max(0,G[who].hp-n);log(`${who==='player'?'Joueur':'IA'} subit ${n} dégâts !`);}
+function splashDmg(who,n){
+  const dead=[];
+  G[who].field.forEach(c=>{c.hp-=n;if(c.hp<=0)dead.push(c);});
+  G[who].field=G[who].field.filter(c=>c.hp>0);
+  dead.forEach(c=>{G[who].discard.push(c);triggerEffect(c,'onDeath',who,who==='player'?'ai':'player');});
+  log(`Splash ${n} dégâts sur le champ de ${who==='player'?'Joueur':'IA'} !`);
+}
+function ensureBase(c){if(c.baseAtk===undefined)c.baseAtk=c.atk;if(c.baseMhp===undefined)c.baseMhp=c.mhp;if(c.buffAtk===undefined)c.buffAtk=0;if(c.buffMhp===undefined)c.buffMhp=0;}
+function buffFaction(who,fac,stat,val){
+  G[who].field.forEach(c=>{if(!cardFactions(c,who).has(fac))return;ensureBase(c);if(stat==='atk'){c.atk+=val;c.buffAtk+=val;}if(stat==='mhp'){c.mhp+=val;c.hp=Math.min(c.hp+val,c.mhp);c.buffMhp+=val;}});
+  log(`${FACTION[fac].lb} : +${val} ${stat==='atk'?'ATK':'PV'} !`);
+}
+function buffAll(who,stat,val){G[who].field.forEach(c=>{ensureBase(c);if(stat==='atk'){c.atk+=val;c.buffAtk+=val;}if(stat==='mhp'){c.mhp+=val;c.hp=Math.min(c.hp+val,c.mhp);c.buffMhp+=val;}});}
+function buffLastSummon(who,stat,val){const f=G[who].field;if(!f.length)return;const c=f[f.length-1];ensureBase(c);if(stat==='atk'){c.atk+=val;c.buffAtk+=val;}if(stat==='mhp'){c.mhp+=val;c.hp=Math.min(c.hp+val,c.mhp);c.buffMhp+=val;}}
+function healAll(who){G[who].field.forEach(c=>{c.hp=c.mhp;});log('Tous les invoqués soignés !');}
+function healFaction(who,fac){G[who].field.filter(c=>cardFactions(c,who).has(fac)).forEach(c=>{c.hp=c.mhp;});}
+function setDiscount(who,n){G[who].discount=(G[who].discount||0)+n;log(`Prochaine carte : -${n} coût !`);}
+
+// ── THETA BLOOD ──
+function gainBlood(who,n){
+  // Check for Cycle Éternel permanent bonus on death
+  G[who].blood=(G[who].blood||0)+n;
+  log(`${who==='player'?'Vous gagnez':'IA gagne'} ${n}🩸 (total: ${G[who].blood}🩸) !`);
+}
+function spendBlood(who,n){
+  G[who].blood=Math.max(0,(G[who].blood||0)-n);
+  log(`${who==='player'?'Vous dépensez':'IA dépense'} ${n}🩸 (reste: ${G[who].blood}🩸).`);
+}
+
+function scheduleSacrifice(who,facFilter,n,title,cb){
+  if(who!=='player'){aiSacrifice(facFilter,cb);return;}
+  const pool=facFilter==='ANY'
+    ? G.player.field
+    : G.player.field.filter(c=>c.fac===facFilter);
+  if(!pool.length){log(`Aucun invoqué ${facFilter==='ANY'?'allié':'Θ'} à sacrifier.`);return;}
+  openPicker(pool,title,(chosen)=>{
+    // Remove from field
+    const card=G.player.field.find(c=>c.uid===chosen.uid);
+    if(!card)return;
+    G.player.field=G.player.field.filter(c=>c.uid!==chosen.uid);
+    G.player.discard.push(card);
+    log(`${card.n} est sacrifié !`);
+    triggerEffect(card,'onDeath','player','ai');
+    cb(card);
+    render();
+  });
+}
+
+function aiSacrifice(facFilter,cb){
+  const pool=facFilter==='ANY'
+    ? G.ai.field
+    : G.ai.field.filter(c=>c.fac===facFilter);
+  if(!pool.length)return;
+  // AI sacrifices lowest ATK
+  const card=pool.reduce((a,b)=>b.atk<a.atk?b:a);
+  G.ai.field=G.ai.field.filter(c=>c.uid!==card.uid);
+  G.ai.discard.push(card);
+  log(`L'IA sacrifie ${card.n} !`);
+  triggerEffect(card,'onDeath','ai','player');
+  cb(card);
+}
+
+function scheduleRitualSummon(who,cardId,title){
+  // Try hand first, then deck
+  const fromHand=G[who].hand.find(c=>c.id===cardId);
+  if(fromHand){
+    G[who].hand=G[who].hand.filter(c=>c.uid!==fromHand.uid);
+    const placed={...fromHand,hp:fromHand.mhp,hasAttacked:false,baseAtk:fromHand.baseAtk||fromHand.atk,baseMhp:fromHand.baseMhp||fromHand.mhp,buffAtk:fromHand.buffAtk||0,buffMhp:fromHand.buffMhp||0,enchantments:[]};
+    G[who].field.push(placed);
+    log(`${title} : ${fromHand.n} invoqué depuis la main !`);
+    triggerEffect(fromHand,'onSummon',who,who==='player'?'ai':'player');
+    render();return;
+  }
+  const fromDeck=G[who].deck.find(c=>c.id===cardId);
+  if(fromDeck){
+    G[who].deck=G[who].deck.filter(c=>c.uid!==fromDeck.uid);
+    const placed={...fromDeck,hp:fromDeck.mhp,hasAttacked:false,baseAtk:fromDeck.baseAtk||fromDeck.atk,baseMhp:fromDeck.baseMhp||fromDeck.mhp,buffAtk:fromDeck.buffAtk||0,buffMhp:fromDeck.buffMhp||0,enchantments:[]};
+    G[who].field.push(placed);
+    log(`${title} : ${fromDeck.n} invoqué depuis le deck !`);
+    triggerEffect(fromDeck,'onSummon',who,who==='player'?'ai':'player');
+    render();return;
+  }
+  log(`${title} — carte introuvable dans deck/main.`);
+}
+
+// ── PERMANENTS ──
+function applyPermanentEffects(who){
+  G[who].permanents.forEach(p=>{
+    if(p.eff==='atk_bonus') G[who].field.forEach(c=>{ensureBase(c);c.atk+=p.val;c.buffAtk+=p.val;});
+  });
+}
+function applyPermRegen(who){
+  G[who].permanents.forEach(p=>{
+    if(p.eff==='regen') G[who].field.forEach(c=>{c.hp=Math.min(c.mhp,c.hp+p.val);});
+  });
+}
+function getPermEnergyBonus(who){return G[who].permanents.filter(p=>p.eff==='energy_bonus').reduce((s,p)=>s+p.val,0);}
+function endOfTurnPerms(who){
+  // destroy permanents that have endOfTurn destruction (none yet — kept for future)
+  // Remove universe permanent effect tracking
+}
+function renderPerms(who){} // handled inside renderField now
+
+function mkPermCard(perm,fac){
+  const f=fd(fac||'NEUTRE'),st=SPELL_TYPE_STYLE['Permanent'];
+  const div=document.createElement('div');div.className='perm-card';
+  div.style.borderColor=f.c+'88';div.style.boxShadow=`0 0 8px ${f.c}30`;
+  const tb=document.createElement('div');tb.className='perm-card-type';tb.textContent='🔒 PERM';
+  tb.style.color=st.c;tb.style.borderColor=st.c+'44';tb.style.background=st.bg;
+  const fc=document.createElement('div');fc.className='perm-card-fac';fc.textContent=f.lb;fc.style.color=f.c;
+  const nm=document.createElement('div');nm.className='perm-card-name';nm.textContent=perm.n;
+  const ef=document.createElement('div');ef.className='perm-card-eff';ef.textContent=perm.n;
+  div.appendChild(tb);div.appendChild(fc);div.appendChild(nm);
+  // Long press to zoom
+  attachLongPress(div,{...perm,t:'spell',sub:'Permanent',el:'NEUTRE',fac:fac||'NEUTRE',cost:0});
+  return div;
+}
+
+// ── ENCHANTMENTS ──
+function attachEnchantment(who,targetUid,enchantDef){
+  const c=G[who].field.find(x=>x.uid===targetUid);if(!c)return;
+  c.enchantments=c.enchantments||[];
+  c.enchantments.push(enchantDef);
+  log(`${enchantDef.n} attaché à ${c.n} !`);
+}
+function removeEnchantmentsOnDeath(card,who){
+  (card.enchantments||[]).forEach(e=>{
+    G[who].discard.push({...e,t:'spell'});
+    log(`${e.n} détruit avec ${card.n}.`);
+  });
+}
+
+// ── PICKER / SCHEDULE ──
+function openPicker(cards,title,cb){
+  pickerCb=cb;
+  document.getElementById('picker-title').textContent=title;
+  const sc=document.getElementById('picker-scroll');sc.innerHTML='';
+  cards.forEach(card=>{const c=mkCard(card,{nodrag:false});attachLongPress(c,card);c.onclick=()=>{closePicker();cb(card);};sc.appendChild(c);});
+  document.getElementById('picker-overlay').classList.add('show');
+}
+function closePicker(){document.getElementById('picker-overlay').classList.remove('show');pickerCb=null;}
+function pickerCancel(){closePicker();if(pickerCancelCb)pickerCancelCb();pickerCancelCb=null;render();}
+function schedulePick(who,fac,n,title){
+  if(who!=='player'){aiPickFromDeck(fac,n);return;}
+  const pool=G.player.deck.filter(c=>c.fac===fac);if(!pool.length){log(`Aucune carte ${fac} dans le deck.`);return;}
+  openPicker(pool.slice(0,9),title,(chosen)=>{G.player.deck=G.player.deck.filter(c=>c.uid!==chosen.uid);G.player.hand.push(chosen);log(`${chosen.n} → main !`);render();});
+}
+function scheduleBatteryPick(who,fac,title){
+  if(who!=='player'){aiPickBattery(fac);return;}
+  const pool=G.player.deck.filter(c=>c.fac===fac);if(!pool.length){log(`Aucune carte ${fac} en deck.`);return;}
+  openPicker(pool.slice(0,9),title,(chosen)=>{G.player.deck=G.player.deck.filter(c=>c.uid!==chosen.uid);G.player.battery.push(chosen);log(`${chosen.n} → batterie !`);render();});
+}
+function scheduleHeal(who,n){
+  if(who!=='player'){aiHealAlly(n);return;}
+  if(!G.player.field.length){log("Aucun allié.");return;}
+  openPicker(G.player.field,`Soignez un allié (+${n} PV)`,(chosen)=>{const c=G.player.field.find(x=>x.uid===chosen.uid);if(c){c.hp=Math.min(c.mhp,c.hp+n);log(`${c.n} soigné +${n} PV !`);}render();});
+}
+function scheduleBuffAlly(who,stat,val,title,isEnchant){
+  if(who!=='player'){if(G.player.field.length)buffLastSummon(who,stat,val);return;}
+  if(!G.player.field.length){log("Aucun allié.");return;}
+  openPicker(G.player.field,title,(chosen)=>{
+    const c=G.player.field.find(x=>x.uid===chosen.uid);if(!c)return;
+    if(stat==='mhp'){c.mhp+=val;c.hp=Math.min(c.hp+val,c.mhp);ensureBase(c);c.buffMhp+=val;log(`${c.n} +${val} PV !`);}
+    else if(stat==='multiFacton'){c.allFactions=true;log(`${c.n} compte comme toutes les factions !`);}
+    if(isEnchant)attachEnchantment(who,chosen.uid,{id:'sa3',n:'Forteresse Alpha'});
+    render();
+  });
+}
+function aiPickFromDeck(fac,n){const p=G.ai.deck.filter(c=>c.fac===fac);for(let i=0;i<n&&p.length;i++){const c=p.splice(Math.floor(Math.random()*p.length),1)[0];G.ai.deck=G.ai.deck.filter(x=>x.uid!==c.uid);G.ai.hand.push(c);}}
+function aiPickBattery(fac){const p=G.ai.deck.filter(c=>c.fac===fac);if(!p.length)return;const c=p[Math.floor(Math.random()*p.length)];G.ai.deck=G.ai.deck.filter(x=>x.uid!==c.uid);G.ai.battery.push(c);}
+function aiHealAlly(n){if(!G.ai.field.length)return;const c=G.ai.field.reduce((a,b)=>(b.mhp-b.hp>a.mhp-a.hp)?b:a);c.hp=Math.min(c.mhp,c.hp+n);}
+
+function triggerEffect(card,event,who,opp){
+  const def=DEFS.find(d=>d.id===card.id);if(!def)return;
+  if(event==='onSummon'&&def.onSummon)def.onSummon(who,card,opp);
+  if(event==='onDeath'&&def.onDeath){removeEnchantmentsOnDeath(card,who);def.onDeath(who,card,opp);}
+  if(event==='onPlay'&&def.onPlay)def.onPlay(who,opp,card);
+}
+
+// ══════════════════════════════════════════
+// QUICK SPELL MODAL (opponent's turn)
+// ══════════════════════════════════════════
+// checkQuick — shows toast if player has a playable Rapide spell
+// Called after any action the opponent could react to
+function checkQuick(){
+  if(!G.player) return;
+  // Only during AI turn
+  if(G.turn!=='ai') return;
+  if(quickToastDismissed) return;
+  const quickCards=G.player.hand.filter(c=>c.t==='spell'&&c.sub==='Rapide'&&c.cost<=G.player.energy);
+  if(quickCards.length>0) showQuickToast(quickCards);
+  else hideQuickToast();
+}
+let quickToastDismissed=false;
+
+function updateQuickBtn(){
+  // Legacy — delegate to checkQuick
+  checkQuick();
+}
+
+function showQuickToast(cards){
+  const toast=document.getElementById('quick-toast');
+  const container=document.getElementById('quick-toast-cards');
+  container.innerHTML='';
+  cards.forEach(card=>{
+    const f=fd(card.fac),e=ed(card.el),st=SPELL_TYPE_STYLE[card.sub]||{c:'#888',label:card.sub};
+    const wrap=document.createElement('div');wrap.className='qt-card';
+    const inner=document.createElement('div');inner.className='qt-card-inner';
+    inner.style.borderColor=f.c+'99';inner.style.boxShadow=`0 0 6px ${f.c}30`;
+    inner.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:7px;font-family:'Cinzel',serif;color:${e.c};border:1px solid ${e.c}40;background:${e.c}15;border-radius:2px;padding:1px 3px;">${e.lb}</span>
+        <span style="font-size:8px;font-family:'Cinzel',serif;color:var(--gold);background:rgba(240,192,64,0.12);border:1px solid rgba(240,192,64,0.3);border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-weight:700;">${card.cost}</span>
+      </div>
+      <div style="font-size:7px;font-family:'Cinzel',serif;font-weight:700;text-align:center;color:${f.c};">${f.lb}</div>
+      <div style="font-size:8px;font-family:'Cinzel',serif;font-weight:600;text-align:center;color:var(--text);line-height:1.2;">${card.n}</div>
+      <div style="font-size:7px;font-family:'Cinzel',serif;font-weight:700;text-align:center;color:${st.c};background:${st.bg};border:1px solid ${st.c}44;border-radius:3px;padding:1px 3px;margin-top:1px;">${st.label}</div>
+      <div style="font-size:6px;color:var(--muted);font-style:italic;line-height:1.3;margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);padding-top:2px;">${card.eff||''}</div>`;
+    attachLongPress(inner,card);
+    const playBtn=document.createElement('button');playBtn.className='qt-play-btn';playBtn.textContent='▶ Jouer';
+    playBtn.onclick=(ev)=>{ev.stopPropagation();playQuickSpell(card.uid);};
+    wrap.appendChild(inner);wrap.appendChild(playBtn);
+    container.appendChild(wrap);
+  });
+  toast.classList.add('show');
+}
+
+function hideQuickToast(){
+  document.getElementById('quick-toast').classList.remove('show');
+}
+
+function dismissQuickToast(){
+  quickToastDismissed=true;
+  hideQuickToast();
+}
+function openQuickModal(){
+  const pool=G.player.hand.filter(c=>c.t==='spell'&&c.sub==='Rapide'&&c.cost<=G.player.energy);
+  if(!pool.length)return;
+  const sc=document.getElementById('quick-scroll');sc.innerHTML='';
+  pool.forEach(card=>{
+    const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';
+    const c=mkCard(card,{nodrag:false});
+    attachLongPress(c,card);
+    c.onclick=()=>{playQuickSpell(card.uid);};
+    wrap.appendChild(c);sc.appendChild(wrap);
+  });
+  document.getElementById('quick-modal').classList.add('show');
+}
+function closeQuickModal(){document.getElementById('quick-modal').classList.remove('show');}
+function playQuickSpell(uid){
+  closeQuickModal();
+  const idx=G.player.hand.findIndex(c=>c.uid===uid);if(idx===-1)return;
+  const card=G.player.hand[idx];
+  const ec=Math.max(0,card.cost-(G.player.discount||0));
+  if(ec>G.player.energy){log("Pas assez d'énergie !");return;}
+  G.player.hand.splice(idx,1);G.player.energy-=ec;if(G.player.discount>0)G.player.discount=0;
+  G.player.discard.push(card);
+  showSpellAnim(card,'player');
+  log(`Sort Rapide : ${card.n} !`);
+  triggerEffect(card,'onPlay','player','ai');
+  // Refresh toast with remaining quick spells
+  const remaining=G.player.hand.filter(c=>c.t==='spell'&&c.sub==='Rapide'&&c.cost<=G.player.energy);
+  if(remaining.length>0&&G.turn==='ai') showQuickToast(remaining);
+  else hideQuickToast();
+  render();
+}
+
+// ══════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════
+function mkCard(card,opts={}){
+  const{sel=false,nodrag=false,dimmed=false}=opts;
+  const e=ed(card.el),f=fd(card.fac),isInv=card.t==='invoke';
+  const div=document.createElement('div');
+  div.className='card'+(sel?' sel':'')+(nodrag?' nodrag':'')+(dimmed?' dimmed':'');
+  if(isInv&&(card.enchantments||[]).length)div.classList.add('enchanted');
+  div.style.borderColor=sel?'#f0c040':f.c+'99';
+  div.style.boxShadow=sel?`0 0 16px ${f.c}90`:dimmed?'none':`0 0 5px ${f.c}20`;
+  // header
+  const hdr=document.createElement('div');hdr.className='c-hdr';
+  const elb=document.createElement('span');elb.className='c-el';
+  elb.textContent=e.lb;elb.style.color=e.c;elb.style.border=`1px solid ${e.c}40`;elb.style.background=`${e.c}15`;
+  const cb=document.createElement('span');cb.className='c-cost';cb.textContent=card.cost;
+  hdr.appendChild(elb);hdr.appendChild(cb);div.appendChild(hdr);
+  const fc=document.createElement('div');fc.className='c-faction';fc.textContent=f.lb;fc.style.color=f.c;div.appendChild(fc);
+  const nm=document.createElement('div');nm.className='c-name';nm.textContent=card.n;div.appendChild(nm);
+  const sb=document.createElement('div');sb.className='c-sub';sb.style.color=isInv?'#8090c0':'#a080d0';
+  sb.textContent=isInv?card.sub:'Sort';div.appendChild(sb);
+  // spell type badge
+  if(!isInv){
+    const st=SPELL_TYPE_STYLE[card.sub];
+    if(st){const tb=document.createElement('div');tb.className='c-spell-type';tb.textContent=st.label;tb.style.color=st.c;tb.style.background=st.bg;tb.style.border=`1px solid ${st.c}44`;div.appendChild(tb);}
+  }
+  if(isInv){
+    const stats=document.createElement('div');stats.className='c-stats';
+    const bA=card.buffAtk||0,bH=card.buffMhp||0;
+    const baseA=card.baseAtk!==undefined?card.baseAtk:card.atk;
+    const baseH=card.baseMhp!==undefined?card.baseMhp:card.mhp;
+    const atkT=bA>0?`<span style="color:#ffaaaa">${baseA}</span><span style="color:#ff9922;font-size:7px"> +${bA}</span>`:`<span style="color:#ffaaaa">${card.atk}</span>`;
+    const hpT=bH>0?`<span style="color:#aaffcc">${card.hp}/${baseH}</span><span style="color:#44ff99;font-size:7px"> +${bH}</span>`:`<span style="color:#aaffcc">${card.hp}/${card.mhp}</span>`;
+    stats.innerHTML=`<div class="c-sb"><div class="c-sl c-atk-l">ATK</div><div class="c-sv">${atkT}</div></div><div class="c-sb"><div class="c-sl c-hp-l">PV</div><div class="c-sv">${hpT}</div></div>`;
+    div.appendChild(stats);
+  }
+  if(card.eff){const ef=document.createElement('div');ef.className='c-eff';ef.textContent=card.eff;div.appendChild(ef);}
+  if(isInv&&card.hasAttacked){const dot=document.createElement('div');dot.className='c-atk-dot';div.appendChild(dot);}
+  attachLongPress(div,card);
+  return div;
+}
+
+function renderBat(who){
+  const row=document.getElementById((who==='player'?'pl':'ai')+'-bat');
+  while(row.children.length>1)row.removeChild(row.lastChild);
+  G[who].battery.forEach(c=>{const f=fd(c.fac);const p=document.createElement('div');p.className='bat-pip';p.style.border=`1px solid ${f.c}55`;p.textContent='⚡';row.appendChild(p);});
+}
+
+function renderField(who){
+  const fld=document.getElementById(who==='player'?'pl-field':'ai-field');
+  fld.innerHTML='';const isAI=who==='ai';
+  fld.classList.remove('target-on');
+
+  const hasInvoked=G[who].field.length>0;
+  const hasPerms=G[who].permanents.length>0;
+
+  if(!hasInvoked&&!hasPerms){
+    const e=document.createElement('div');e.className='field-empty';
+    e.textContent=isAI?'Champ ennemi vide':'Votre champ est vide';
+    fld.appendChild(e);return;
+  }
+
+  // Render invoked cards
+  G[who].field.forEach(card=>{
+    const isP=G.turn==='player';
+    const sel=!isAI&&G.selAtk.includes(card.uid);
+    const canSel=!isAI&&isP&&(G.phase==='main'||G.phase==='attack')&&!card.hasAttacked;
+    const isTgt=isAI&&G.phase==='target';
+    const dimmed=!isAI&&card.hasAttacked&&!sel;
+    const c=mkCard(card,{sel,nodrag:!canSel&&!isTgt,dimmed});
+    if(canSel)c.onclick=()=>toggleAtk(card.uid);
+    if(isTgt)c.onclick=()=>doTargetInvoke(card.uid);
+    // Sacrifice button for player's Theta invoked
+    if(!isAI&&isP&&G.phase==='main'){
+      const sacBtn=document.createElement('div');
+      sacBtn.style.cssText='position:absolute;bottom:2px;left:2px;font-size:6px;font-family:Cinzel,serif;color:#20c060;background:rgba(32,192,96,0.15);border:1px solid rgba(32,192,96,0.4);border-radius:3px;padding:1px 3px;cursor:pointer;z-index:2;';
+      sacBtn.textContent='⚰ Sacr.';
+      sacBtn.onclick=(e)=>{e.stopPropagation();sacrificeCard(card.uid);};
+      c.appendChild(sacBtn);
+    }
+    fld.appendChild(c);
+  });
+
+  // Separator + permanents if any
+  if(hasPerms&&hasInvoked){
+    const sep=document.createElement('div');sep.className='perm-separator';fld.appendChild(sep);
+  }
+  G[who].permanents.forEach(p=>{
+    // Find the faction of the permanent by looking at DEFS
+    const def=DEFS.find(d=>d.id===p.id);
+    const fac=def?def.fac:'NEUTRE';
+    const pc=mkPermCard(p,fac);
+    fld.appendChild(pc);
+  });
+}
+
+function renderHand(){
+  const scroll=document.getElementById('hand-scroll');scroll.innerHTML='';
+  const isP=G.turn==='player',blocked=G.phase==='target';
+  G.player.hand.forEach(card=>{
+    const wrap=document.createElement('div');wrap.className='hand-wrap';
+    const ec=Math.max(0,card.cost-(G.player.discount||0));
+    const dimmed=ec>G.player.energy;
+    const c=mkCard({...card,cost:ec},{nodrag:!isP||blocked,dimmed});
+    if(isP&&!blocked)c.onclick=()=>playCard(card.uid);
+    wrap.appendChild(c);
+    if(isP&&!G.player.batPlaced){const b=document.createElement('button');b.className='bat-add-btn';b.textContent='+ Batterie';b.onclick=ev=>{ev.stopPropagation();addBattery(card.uid);};wrap.appendChild(b);}
+    scroll.appendChild(wrap);
+  });
+  const disc=G.player.discount>0?` (rabais -${G.player.discount})`:'';
+  document.getElementById('hand-lbl').textContent=`Main (${G.player.hand.length}) — Énergie: ${G.player.energy}/${G.player.battery.length} ⚡${disc}`;
+}
+
+function renderStats(){
+  document.getElementById('pl-hp').textContent=`❤️ ${G.player.hp}`;
+  document.getElementById('pl-nrg').textContent=`⚡ ${G.player.energy}/${G.player.battery.length}`;
+  document.getElementById('pl-dk').textContent=`🃏 ${G.player.deck.length}`;
+  const plBlood=G.player.blood||0;
+  const plBEl=document.getElementById('pl-blood');
+  if(plBEl){plBEl.textContent=plBlood>0?`🩸 ${plBlood}`:'';plBEl.style.display=plBlood>0?'':'none';}
+  document.getElementById('ai-hp').textContent=`❤️ ${G.ai.hp}`;
+  document.getElementById('ai-nrg').textContent=`⚡ ${G.ai.energy}/${G.ai.battery.length}`;
+  document.getElementById('ai-dk').textContent=`🃏 ${G.ai.deck.length}`;
+  const aiBlood=G.ai.blood||0;
+  const aiBEl=document.getElementById('ai-blood');
+  if(aiBEl){aiBEl.textContent=aiBlood>0?`🩸 ${aiBlood}`:'';aiBEl.style.display=aiBlood>0?'':'none';}
+}
+
+function renderTurn(){
+  const badge=document.getElementById('turn-badge'),isP=G.turn==='player';
+  if(G.phase==='target'){
+    badge.textContent='🎯 Choisissez cible';badge.style.color='#cc77ff';badge.style.borderColor='#9b30ff';badge.style.background='rgba(155,48,255,0.1)';
+  } else {
+    badge.textContent=isP?'⚔ Votre tour':'⏳ IA...';
+    badge.style.color=isP?'#50e090':'#e07070';badge.style.borderColor=isP?'#50e090':'#e07070';
+    badge.style.background=isP?'rgba(80,224,144,0.08)':'rgba(224,112,112,0.08)';
+  }
+  document.getElementById('btn-end').disabled=G.turn!=='player';
+}
+
+function renderDivider(){
+  const div=document.getElementById('divider');div.innerHTML='';
+  const isP=G.turn==='player';
+  if(isP&&G.phase==='attack'&&G.selAtk.length){
+    const b=document.createElement('button');b.className='act-btn atk';b.textContent=`⚔ Déclarer l'attaque (${G.selAtk.length})`;b.onclick=declareAttack;div.appendChild(b);
+  }
+  if(G.phase==='target'){
+    // Direct attack button — only if AI field is empty
+    if(!G.ai.field.length){
+      const b=document.createElement('button');b.className='act-btn tgt';b.textContent="👤 Attaque directe";b.onclick=doTargetDirect;div.appendChild(b);
+    }
+  }
+}
+
+function render(){
+  if(!G.player)return;
+  renderStats();renderBat('player');renderBat('ai');
+  renderField('player');renderField('ai');
+  renderHand();renderTurn();renderDivider();
+  if(logOpen)renderLog();if(discardOpen)renderDiscard();
+  checkWin();
+}
+
+// ══════════════════════════════════════════
+// ZOOM
+// ══════════════════════════════════════════
+let zoomTimer=null;
+function attachLongPress(el,card){
+  let t=null;
+  const start=(e)=>{t=setTimeout(()=>{e.preventDefault();showZoom(card);t=null;},420);};
+  const cancel=()=>{if(t){clearTimeout(t);t=null;}};
+  el.addEventListener('touchstart',start,{passive:true});el.addEventListener('touchend',cancel);el.addEventListener('touchmove',cancel);
+  el.addEventListener('mousedown',start);el.addEventListener('mouseup',cancel);el.addEventListener('mouseleave',cancel);
+}
+function showZoom(card){
+  const e=ed(card.el),f=fd(card.fac),isInv=card.t==='invoke';
+  const zel=document.getElementById('z-el');zel.textContent=e.lb;zel.style.color=e.c;zel.style.border=`1px solid ${e.c}55`;zel.style.background=`${e.c}18`;zel.style.borderRadius='4px';zel.style.padding='2px 8px';
+  document.getElementById('z-cost').textContent=card.cost;
+  const zf=document.getElementById('z-fac');zf.textContent=f.lb;zf.style.color=f.c;
+  document.getElementById('z-name').textContent=card.n;
+  document.getElementById('z-sub').textContent=isInv?card.sub:(card.t==='spell'?'Sort':'');
+  document.getElementById('card-zoom-inner').style.border=`1.5px solid ${f.c}66`;
+  // Spell type badge in zoom
+  const stWrap=document.getElementById('z-spell-type-wrap');stWrap.innerHTML='';
+  if(!isInv&&card.sub){const st=SPELL_TYPE_STYLE[card.sub];if(st){const tb=document.createElement('div');tb.className='zoom-spell-type';tb.textContent=st.label;tb.style.color=st.c;tb.style.borderColor=st.c+'55';tb.style.background=st.bg;stWrap.appendChild(tb);}}
+  const zs=document.getElementById('z-stats');
+  if(isInv){
+    zs.style.display='flex';
+    const bA=card.buffAtk||0,bH=card.buffMhp||0,baseA=card.baseAtk!==undefined?card.baseAtk:card.atk,baseH=card.baseMhp!==undefined?card.baseMhp:card.mhp;
+    const atkS=bA>0?`${baseA} <span style="color:#ff9922;font-size:14px">+${bA}</span>`:`${card.atk}`;
+    const hpS=bH>0?`${card.hp}/${baseH} <span style="color:#44ff99;font-size:14px">+${bH}</span>`:`${card.hp||card.mhp}/${card.mhp}`;
+    zs.innerHTML=`<div class="zoom-sb"><div class="zoom-sl" style="color:#e05555">ATK</div><div class="zoom-sv" style="color:#ffaaaa">${atkS}</div></div><div class="zoom-sb"><div class="zoom-sl" style="color:#50e090">PV</div><div class="zoom-sv" style="color:#aaffcc">${hpS}</div></div>`;
+  } else zs.style.display='none';
+  const ze=document.getElementById('z-eff');ze.textContent=card.eff||'Aucun effet.';ze.style.display='block';
+  document.getElementById('card-zoom').classList.add('show');
+}
+function closeZoom(){document.getElementById('card-zoom').classList.remove('show');}
+
+// ══════════════════════════════════════════
+// WIN
+// ══════════════════════════════════════════
+function checkWin(){if(G.player.hp<=0)showWin('ai');else if(G.ai.hp<=0)showWin('player');}
+function showWin(who){
+  const t=document.getElementById('win-txt'),s=document.getElementById('win-sub');
+  if(who==='player'){t.textContent='✨ VICTOIRE !';t.style.color='#f0c040';t.style.textShadow='0 0 30px #f0c040';s.textContent="L'IA est vaincue.";}
+  else{t.textContent='💀 DÉFAITE';t.style.color='#e05555';t.style.textShadow='0 0 30px #e05555';s.textContent='Vos PV sont épuisés.';}
+  document.getElementById('win-overlay').classList.add('show');
+}
+
+// ══════════════════════════════════════════
+// PLAYER ACTIONS
+// ══════════════════════════════════════════
+function sacrificeCard(uid){
+  if(G.turn!=='player'||G.phase!=='main')return;
+  const card=G.player.field.find(c=>c.uid===uid);if(!card)return;
+  G.player.field=G.player.field.filter(c=>c.uid!==uid);
+  G.player.discard.push(card);
+  const bonus=G.player.permanents.some(p=>p.eff==='theta_death_blood')?1:0;
+  const base=card.fac==='THETA'?2:1;
+  gainBlood('player',base+bonus);
+  log(`${card.n} sacrifié → +${base+bonus}🩸 !`);
+  triggerEffect(card,'onDeath','player','ai');
+  render();
+}
+
+function playCard(uid){
+  if(G.turn!=='player'||G.phase==='target')return;
+  const p=G.player,idx=p.hand.findIndex(c=>c.uid===uid);if(idx===-1)return;
+  const card=p.hand[idx];
+
+  // Ritual invocation — needs sacrifices instead of energy
+  if(card.ritualCost){
+    const pool=p.field.filter(c=>!card.ritualFac||c.fac===card.ritualFac);
+    if(pool.length<card.ritualCost){log(`${card.n} — sacrifiez ${card.ritualCost} invoqués ${card.ritualFac||''} !`);render();return;}
+    scheduleRitualInvoke(card,card.ritualCost,card.ritualFac);
+    return;
+  }
+
+  const ec=Math.max(0,card.cost-(p.discount||0));
+  if(ec>p.energy){log("Pas assez d'énergie !");render();return;}
+  p.hand.splice(idx,1);p.energy-=ec;if(p.discount>0)p.discount=0;
+  if(card.t==='invoke'){
+    const placed={...card,hp:card.mhp,hasAttacked:false,baseAtk:card.baseAtk||card.atk,baseMhp:card.baseMhp||card.mhp,buffAtk:card.buffAtk||0,buffMhp:card.buffMhp||0,enchantments:[]};
+    // Apply nextThetaBuff if Theta
+    if(card.fac==='THETA'&&(p.nextThetaBuff||0)>0){
+      ensureBase(placed);placed.atk+=p.nextThetaBuff;placed.buffAtk+=p.nextThetaBuff;
+      log(`${card.n} hérite +${p.nextThetaBuff} ATK du cycle !`);p.nextThetaBuff=0;
+    }
+    p.field.push(placed);log(`Vous invoquez ${card.n} !`);
+    triggerEffect(card,'onSummon','player','ai');
+  } else {
+    p.discard.push(card);showSpellAnim(card,'player');
+    log(`Vous jouez ${card.n}.`);triggerEffect(card,'onPlay','player','ai');
+  }
+  render();
+}
+
+function scheduleRitualInvoke(card,needed,fac){
+  const p=G.player;
+  const pool=p.field.filter(c=>!fac||c.fac===fac);
+  openPicker(pool,`Rituel : sacrifiez 1 invoqué ${fac||'allié'} (${needed} restant${needed>1?'s':''})`,(chosen)=>{
+    const c=p.field.find(x=>x.uid===chosen.uid);if(!c)return;
+    p.field=p.field.filter(x=>x.uid!==chosen.uid);p.discard.push(c);
+    const bonus=p.permanents.some(perm=>perm.eff==='theta_death_blood')?1:0;
+    gainBlood('player',(c.fac==='THETA'?2:1)+bonus);
+    triggerEffect(c,'onDeath','player','ai');
+    if(needed>1){scheduleRitualInvoke(card,needed-1,fac);}
+    else{
+      const realIdx=p.hand.findIndex(x=>x.uid===card.uid);
+      if(realIdx!==-1)p.hand.splice(realIdx,1);
+      const placed={...card,hp:card.mhp,hasAttacked:false,baseAtk:card.baseAtk||card.atk,baseMhp:card.baseMhp||card.mhp,buffAtk:card.buffAtk||0,buffMhp:card.buffMhp||0,enchantments:[]};
+      if(card.fac==='THETA'&&(p.nextThetaBuff||0)>0){ensureBase(placed);placed.atk+=p.nextThetaBuff;placed.buffAtk+=p.nextThetaBuff;log(`${card.n} hérite +${p.nextThetaBuff} ATK !`);p.nextThetaBuff=0;}
+      p.field.push(placed);log(`Rituel accompli ! ${card.n} invoqué !`);
+      triggerEffect(card,'onSummon','player','ai');render();
+    }
+  });
+}
+
+function addBattery(uid){
+  if(G.turn!=='player')return;
+  if(G.player.batPlaced){log("Déjà une carte en batterie ce tour.");render();return;}
+  const idx=G.player.hand.findIndex(c=>c.uid===uid);if(idx===-1)return;
+  const card=G.player.hand.splice(idx,1)[0];
+  G.player.battery.push(card);G.player.batPlaced=true;
+  log(`${card.n} → Batterie (${G.player.battery.length} ⚡/tour)`);render();
+}
+
+// ── COMBAT ──
+function toggleAtk(uid){
+  if(G.turn!=='player'||(G.phase!=='main'&&G.phase!=='attack'))return;
+  const card=G.player.field.find(c=>c.uid===uid);if(!card||card.hasAttacked)return;
+  const i=G.selAtk.indexOf(uid);
+  if(i===-1)G.selAtk.push(uid);else G.selAtk.splice(i,1);
+  G.phase=G.selAtk.length>0?'attack':'main';render();
+}
+
+function declareAttack(){
+  if(!G.selAtk.length)return;
+  G.phase='target';G.pendIdx=0;
+  const atk=G.player.field.find(c=>c.uid===G.selAtk[0]);
+  log(`${atk?atk.n:'?'} déclare l'attaque — l'adversaire choisit la cible.`);
+  render();
+}
+function curAtk(){
+  if(G.pendIdx<0||G.pendIdx>=G.selAtk.length)return null;
+  return G.player.field.find(c=>c.uid===G.selAtk[G.pendIdx])||null;
+}
+
+function advanceTarget(){
+  let nxt=-1;
+  for(let i=G.pendIdx+1;i<G.selAtk.length;i++){const c=G.player.field.find(c=>c.uid===G.selAtk[i]);if(c&&!c.hasAttacked){nxt=i;break;}}
+  if(nxt===-1){G.phase='main';G.selAtk=[];G.pendIdx=-1;log("Phase d'attaque terminée. Plus d'attaque ce tour.");}
+  else{G.pendIdx=nxt;const a=G.player.field.find(c=>c.uid===G.selAtk[nxt]);log(`${a?a.n:'?'} : choisissez la cible.`);}
+}
+
+function doTargetDirect(){
+  // Only allowed if AI field is empty
+  if(G.ai.field.length){log("L'IA contrôle des invoqués — attaque directe impossible !");render();return;}
+  const atk=curAtk();if(!atk)return;
+  G.ai.hp=Math.max(0,G.ai.hp-atk.atk);
+  log(`${atk.n} attaque l'IA directement — ${atk.atk} dégâts !`);
+  atk.hasAttacked=true;advanceTarget();render();
+}
+
+function doTargetInvoke(uid){
+  const atk=curAtk(),tgt=G.ai.field.find(c=>c.uid===uid);if(!atk||!tgt)return;
+  log(`${atk.n} attaque ${tgt.n} — ${atk.atk} dégâts !`);
+  tgt.hp-=atk.atk;
+  if(tgt.hp<=0){
+    G.ai.field=G.ai.field.filter(c=>c.uid!==tgt.uid);
+    G.ai.discard.push(tgt);
+    triggerEffect(tgt,'onDeath','ai','player');
+    log(`${tgt.n} est détruit !`);
+  }
+  atk.hasAttacked=true;advanceTarget();render();
+}
+
+function handleEndTurn(){
+  if(G.turn!=='player')return;
+  applyPermRegen('player');
+  G.player.field=G.player.field.map(c=>({...c,hasAttacked:false}));
+  G.player.energy=0;G.player.batPlaced=false;G.player.discount=0;
+  G.phase='main';G.selAtk=[];G.pendIdx=-1;G.turn='ai';
+  log("Fin de votre tour.");quickToastDismissed=false;hideQuickToast();render();
+  setTimeout(aiTurn,800);
+}
+
+// ══════════════════════════════════════════
+// AI
+// ══════════════════════════════════════════
+function aiTurn(){
+  // AI draws + battery
+  drawN('ai',1);log("L'IA pioche.");
+  checkQuick(); // trigger after AI draws
+  if(G.ai.hand.length&&!G.ai.batPlaced){
+    const idx=Math.floor(Math.random()*G.ai.hand.length);
+    G.ai.battery.push(G.ai.hand.splice(idx,1)[0]);G.ai.batPlaced=true;
+    log("L'IA place une carte en batterie.");
+    checkQuick(); // trigger after AI places battery
+  }
+  G.ai.energy=G.ai.battery.length+getPermEnergyBonus('ai');
+  render();
+  setTimeout(()=>{
+    // AI plays spells
+    [...G.ai.hand].filter(c=>c.t==='spell'&&c.sub!=='Enchantement'&&c.cost<=G.ai.energy).forEach(c=>{
+      if(c.cost>G.ai.energy)return;
+      G.ai.hand=G.ai.hand.filter(x=>x.uid!==c.uid);G.ai.energy-=c.cost;
+      G.ai.discard.push(c);showSpellAnim(c,'ai');
+      log(`L'IA joue ${c.n}.`);triggerEffect(c,'onPlay','ai','player');
+    });
+    // AI invokes — check quick after each invocation
+    let played=true;
+    while(played){
+      played=false;
+      const best=G.ai.hand.filter(c=>c.t==='invoke'&&c.cost<=G.ai.energy).sort((a,b)=>b.cost-a.cost)[0];
+      if(best){
+        G.ai.hand=G.ai.hand.filter(c=>c.uid!==best.uid);G.ai.energy-=best.cost;
+        const placed={...best,hp:best.mhp,hasAttacked:false,baseAtk:best.baseAtk||best.atk,baseMhp:best.baseMhp||best.mhp,buffAtk:best.buffAtk||0,buffMhp:best.buffMhp||0,enchantments:[]};
+        // Apply nextThetaBuff for AI
+        if(best.fac==='THETA'&&(G.ai.nextThetaBuff||0)>0){ensureBase(placed);placed.atk+=G.ai.nextThetaBuff;placed.buffAtk+=G.ai.nextThetaBuff;G.ai.nextThetaBuff=0;}
+        G.ai.field.push(placed);log(`L'IA invoque ${best.n} !`);
+        triggerEffect(best,'onSummon','ai','player');
+        checkQuick(); // trigger after each AI invocation
+        played=true;
+      }
+    }
+    render();
+    setTimeout(()=>{
+      // AI attacks
+      [...G.ai.field].forEach(c=>{
+        if(c.hasAttacked)return;
+        if(G.player.field.length>0&&Math.random()<0.6){
+          const tgt=G.player.field[Math.floor(Math.random()*G.player.field.length)];
+          log(`${c.n} attaque ${tgt.n} — ${c.atk} dégâts !`);
+          tgt.hp-=c.atk;
+          if(tgt.hp<=0){G.player.field=G.player.field.filter(x=>x.uid!==tgt.uid);G.player.discard.push(tgt);triggerEffect(tgt,'onDeath','player','ai');log(`${tgt.n} détruit !`);}
+        } else if(G.player.field.length===0){
+          log(`${c.n} attaque Joueur directement — ${c.atk} dégâts !`);G.player.hp=Math.max(0,G.player.hp-c.atk);
+        } else {
+          const tgt=G.player.field[Math.floor(Math.random()*G.player.field.length)];
+          log(`${c.n} attaque ${tgt.n} — ${c.atk} dégâts !`);
+          tgt.hp-=c.atk;
+          if(tgt.hp<=0){G.player.field=G.player.field.filter(x=>x.uid!==tgt.uid);G.player.discard.push(tgt);triggerEffect(tgt,'onDeath','player','ai');log(`${tgt.n} détruit !`);}
+        }
+        c.hasAttacked=true;
+        checkQuick(); // trigger after each AI attack
+      });
+      // End of AI turn — permanents stay
+      applyPermRegen('ai');
+      G.ai.field=G.ai.field.map(c=>({...c,hasAttacked:false}));
+      G.ai.energy=0;G.ai.batPlaced=false;G.ai.discount=0;
+      drawN('player',1);
+      G.player.energy=G.player.battery.length+getPermEnergyBonus('player');
+      G.player.batPlaced=false;
+      G.turn='player';
+      quickToastDismissed=false;hideQuickToast();
+      log(`Votre tour ! Énergie: ${G.player.energy} ⚡`);
+      render();
+    },700);
+  },600);
+}
+
+renderDeckMenu();
+</script>
+</body>
+</html>
